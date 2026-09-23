@@ -9,14 +9,16 @@ const LOGO_URL = 'assets/logo.png';
 
 const W = 792;
 const H = 612;
-const INK = rgb(0, 0, 0);
-const HEAD = rgb(0.25, 0.25, 0.25);
+// UCG palette: navy #1E2B38, light blue #DBEBEE, dark blue green #184B56.
+const NAVY = rgb(0.118, 0.169, 0.22);
+const INK = NAVY;
+const HEAD = NAVY;
 const WHITE = rgb(1, 1, 1);
-const LINE = rgb(0.35, 0.35, 0.35);
-const MUTED = rgb(0.4, 0.4, 0.4);
-const NAVY = rgb(0.125, 0.176, 0.231); // UCG logo colour #202d3b
-const HIGHLIGHT = rgb(0.9, 0.93, 0.98);
-const GOOD = rgb(0.12, 0.48, 0.3);
+const LINE = rgb(0.647, 0.784, 0.812); // blue green #A5C8CF (prints more clearly than the UI border tint)
+const MUTED = rgb(0.29, 0.353, 0.4); // fg-secondary #4A5A66
+const HIGHLIGHT = rgb(0.859, 0.922, 0.933); // light blue #DBEBEE
+const SUBHEAD = rgb(0.78, 0.871, 0.886); // light blue deep #C7DEE2
+const GOOD = rgb(0.094, 0.294, 0.337); // dark blue green #184B56
 
 // Standard PDF fonts only cover WinAnsi; swap anything else for a close match.
 function safeText(font, text) {
@@ -247,10 +249,10 @@ function drawEventPage(doc, fonts, logo, athlete, event, r) {
   const subTop = gTop - titleH;
   EVENTS.forEach((e, i) => {
     const x = gx + romanW + i * colW;
-    p.box(x, subTop - subH, colW, subH, { fill: e === event ? HIGHLIGHT : rgb(0.93, 0.93, 0.93) });
+    p.box(x, subTop - subH, colW, subH, { fill: e === event ? HIGHLIGHT : SUBHEAD });
     p.center(APPARATUS[e].short, x + colW / 2, subTop - subH + 3.5, { size: 7.5, font: fonts.bold });
   });
-  p.box(gx, subTop - subH, romanW, subH, { fill: rgb(0.93, 0.93, 0.93) });
+  p.box(gx, subTop - subH, romanW, subH, { fill: SUBHEAD });
 
   const romans = ['I', 'II', 'III', 'IV'];
   const lines = romans.map((cg) => Math.max(...EVENTS.map((e) => APPARATUS[e].condensed[cg].length)));
@@ -341,7 +343,7 @@ function drawSummaryPage(doc, fonts, logo, athlete, score) {
     });
     y -= 24;
   }
-  p.box(110, y - 34, 506, 34, { fill: rgb(0.93, 0.93, 0.93) });
+  p.box(110, y - 34, 506, 34, { fill: SUBHEAD });
   p.text('All-Around Start Value', 120, y - 22, { size: 13, font: fonts.bold });
   p.box(616, y - 34, 84, 34, { thickness: 1.5, border: INK });
   p.center(score.allAround.toFixed(2), 658, y - 24, { size: 18, font: fonts.bold });

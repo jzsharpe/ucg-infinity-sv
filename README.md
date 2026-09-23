@@ -2,7 +2,7 @@
 
 A web app for planning UCG WAG Open Scoring routines. Coaches and athletes sign in with Google, add athletes, enter each athlete's vault and bars/beam/floor skills, and get live start values. They can export a filled-in **UCG WAG Open Start Value Worksheet** as a PDF.
 
-**Live site:** https://jzsharpe.github.io/ucg-sv-sheets/
+**Live site:** https://jzsharpe.github.io/ucg-infinity-sv/
 
 ## Scoring rules
 
@@ -42,6 +42,10 @@ npm test       # scoring tests (Node 20+)
 
 There's no build step. GitHub Pages serves the files as they are.
 
-## Logo
+## Design
 
-`assets/logo.png` is the UCG logo that appears at the top of each PDF page. `assets/logo-mark.png` (the starburst) is used as the site icon. Replace either file to change them.
+The look follows the UCG Design System (2026 identity): navy / blue green / light blue palette, condensed all-caps display type, 20px cards, pill inputs, and the official logo files in `assets/` (`ucg-primary.svg`, `ucg-mark.svg`). Brand tokens are at the top of `css/styles.css`.
+
+Fonts: the brand faces are Greed Condensed and Suisse Intl, which are licensed and not included in this public repo. The site uses the design system's approved fallbacks, Saira Condensed (Google Fonts) and Arial/Helvetica. If you have a web license that allows it, add the `.woff2` files and `@font-face` rules and the stacks pick them up automatically.
+
+`assets/logo.png` is the lockup drawn at the top of each PDF page.

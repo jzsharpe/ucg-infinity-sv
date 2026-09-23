@@ -80,7 +80,7 @@ function renderUserArea() {
   area.innerHTML = `
     ${u.photoURL ? `<img class="avatar" src="${esc(u.photoURL)}" alt="" referrerpolicy="no-referrer" />` : ''}
     <span class="user-name">${esc(u.displayName || u.email)}</span>
-    <button class="btn btn-ghost btn-sm" id="signout-btn" type="button">Sign out</button>`;
+    <button class="topbar-link" id="signout-btn" type="button">Sign out</button>`;
   $('#signout-btn').onclick = () => store.signOut();
 }
 
@@ -104,11 +104,17 @@ function renderSignIn() {
 
 function renderShell() {
   app.innerHTML = `
+    <section class="page-head">
+      <div class="page-head-inner">
+        <p class="eyebrow">WAG Open Scoring</p>
+        <h1>Start value sheets</h1>
+      </div>
+    </section>
     <div class="layout">
       <aside class="sidebar">
         <div class="sidebar-head">
-          <h2>Athletes</h2>
-          <button class="btn btn-primary btn-sm" id="add-athlete" type="button">+ Add athlete</button>
+          <h2 class="subhead">Athletes</h2>
+          <button class="btn btn-primary btn-sm" id="add-athlete" type="button">Add athlete</button>
         </div>
         <ul id="athlete-list" class="athlete-list"></ul>
       </aside>
@@ -235,7 +241,7 @@ function eventCard(event, athlete) {
   return `
     <article class="card event-card" data-event-card="${event}">
       <header class="card-head">
-        <h3>${ap.label}</h3>
+        <h2 class="card-title">${ap.label}</h2>
         <div class="card-head-right">
           <span class="sv-pill" data-sv="${event}"></span>
           <button class="btn btn-ghost btn-sm" type="button" data-export="${event}">Export PDF</button>
@@ -255,7 +261,7 @@ function eventCard(event, athlete) {
       </div>
       <label class="event-bonus">
         <input type="checkbox" data-bonus="${event}"${athlete.eventBonus?.[event] ? ' checked' : ''} />
-        <span class="event-bonus-text"><strong>Event bonus +${fmt(EVENT_BONUS)}</strong> ${esc(ap.eventBonus)}</span>
+        <span class="event-bonus-text"><strong>Event bonus +${fmt(EVENT_BONUS)}</strong><span>${esc(ap.eventBonus)}</span></span>
         <span class="event-bonus-value calc" data-calc="event-bonus"></span>
       </label>
       <div class="event-foot">
@@ -278,10 +284,10 @@ function renderEditor() {
   const a = selected();
   if (!a) {
     ed.innerHTML = `
-      <div class="empty-editor">
+      <div class="card empty-editor">
         <h2>Add your first athlete</h2>
         <p>Each athlete gets a vault plus bars, beam, and floor routines. Start values update as you type, and you can export a filled-in worksheet PDF.</p>
-        <button class="btn btn-primary" type="button" id="empty-add">+ Add athlete</button>
+        <button class="btn btn-primary" type="button" id="empty-add">Add athlete</button>
       </div>`;
     $('#empty-add').onclick = addAthlete;
     return;
@@ -297,8 +303,8 @@ function renderEditor() {
       </div>
       <div class="editor-actions">
         <span id="save-status" class="save-status"></span>
-        <button class="btn btn-primary" type="button" id="export-all">Export all (PDF)</button>
-        <button class="btn btn-danger-ghost" type="button" id="delete-athlete">Delete</button>
+        <button class="btn btn-primary" type="button" id="export-all">Export PDF</button>
+        <button class="btn btn-quiet" type="button" id="delete-athlete">Delete</button>
       </div>
     </div>
 
@@ -306,7 +312,7 @@ function renderEditor() {
 
     <article class="card vault-card">
       <header class="card-head">
-        <h3>Vault</h3>
+        <h2 class="card-title">Vault</h2>
         <div class="card-head-right"><span class="sv-pill" data-sv="vault"></span></div>
       </header>
       <div class="vault-body">
