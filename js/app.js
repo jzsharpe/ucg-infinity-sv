@@ -19,7 +19,17 @@ const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 const app = $('#app');
-const state = { user: null, athletes: [], selectedId: null };
+const TABS = ['vault', ...EVENTS];
+const state = { user: null, athletes: [], selectedId: null, tab: readTab() };
+
+function readTab() {
+  try {
+    const t = localStorage.getItem('sv-tab');
+    return TABS.includes(t) ? t : 'vault';
+  } catch {
+    return 'vault';
+  }
+}
 
 const blankRoutine = () => Array.from({ length: MAX_SKILLS }, () => ({ name: '', letter: '', eg: '' }));
 const newAthlete = () => ({
@@ -296,7 +306,7 @@ function eventCard(event, athlete) {
     )
     .join('');
   return `
-    <article class="card event-card" data-event-card="${event}">
+    <article class="card event-card" data-event-card="${event}" id="panel-${event}" data-panel="${event}" role="tabpanel" aria-labelledby="tab-${event}">
       <header class="card-head">
         <h2 class="card-title">${ap.label}</h2>
         <div class="card-head-right">
@@ -366,9 +376,9 @@ function renderEditor() {
       </div>
     </div>
 
-    <div class="summary" id="summary"></div>
+    <div class="summary" id="summary" role="tablist" aria-label="Events"></div>
 
-    <article class="card vault-card">
+    <article class="card vault-card" id="panel-vault" data-panel="vault" role="tabpanel" aria-labelledby="tab-vault">
       <header class="card-head">
         <h2 class="card-title">Vault</h2>
         <div class="card-head-right"><span class="sv-pill" data-sv="vault"></span></div>
@@ -404,6 +414,11 @@ function renderEditor() {
 
   ed.oninput = onSkillInput;
   ed.onclick = onEditorClick;
+  $('#summary').onclick = (ev) => {
+    const t = ev.target.closest('[data-tab]');
+    if (t) selectTab(t.dataset.tab);
+  };
+  $('#summary').onkeydown = onTabKey;
   updateComputed();
 }
 
@@ -421,6 +436,27 @@ function onSkillInput(ev) {
   list[t.dataset.event][Number(t.dataset.idx)][t.dataset.field] = t.value;
   updateComputed();
   scheduleSave();
+}
+
+function showPanel() {
+  $$('[data-panel]').forEach((el) => (el.hidden = el.dataset.panel !== state.tab));
+}
+
+function selectTab(tab, focus = false) {
+  state.tab = tab;
+  try {
+    localStorage.setItem('sv-tab', tab);
+  } catch {}
+  updateComputed();
+  if (focus) $(`#tab-${tab}`)?.focus();
+}
+
+function onTabKey(ev) {
+  const i = TABS.indexOf(state.tab);
+  const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[ev.key];
+  if (next == null || !ev.target.closest('[role="tab"]')) return;
+  ev.preventDefault();
+  selectTab(TABS[(next + TABS.length) % TABS.length], true);
 }
 
 let listTimer;
@@ -500,12 +536,20 @@ function updateComputed() {
     $(`[data-sv="${e}"]`).textContent = r.rows.length ? r.startValue.toFixed(1) : '—';
   }
 
-  $('#summary').innerHTML = [
-    ['Vault', v?.startValue],
-    ...EVENTS.map((e) => [APPARATUS[e].short, score.events[e].rows.length ? score.events[e].startValue : null]),
-  ]
-    .map(([label, sv]) => `<div class="stat"><span>${label}</span><strong>${sv == null ? '—' : sv.toFixed(1)}</strong></div>`)
-    .join('') + `<div class="stat stat-aa"><span>All-Around</span><strong>${score.allAround.toFixed(1)}</strong></div>`;
+  // The score tiles double as the event tabs.
+  $('#summary').innerHTML =
+    [
+      ['vault', 'Vault', v?.startValue],
+      ...EVENTS.map((e) => [e, APPARATUS[e].short, score.events[e].rows.length ? score.events[e].startValue : null]),
+    ]
+      .map(([id, label, sv]) => {
+        const on = id === state.tab;
+        return `<button type="button" class="stat stat-tab${on ? ' active' : ''}" role="tab" id="tab-${id}" data-tab="${id}"
+          aria-selected="${on}" aria-controls="panel-${id}" tabindex="${on ? 0 : -1}">
+          <span>${label}</span><strong>${sv == null ? '—' : sv.toFixed(1)}</strong></button>`;
+      })
+      .join('') + `<div class="stat stat-aa"><span>All-Around</span><strong>${score.allAround.toFixed(1)}</strong></div>`;
+  showPanel();
 
   renderListSoon();
 }

@@ -285,6 +285,18 @@ input::placeholder { color: var(--fg-muted); }
   font-family: var(--font-display); font-weight: 700; font-size: 2.4rem; line-height: 1;
   color: var(--fg-primary); font-variant-numeric: tabular-nums;
 }
+.stat-tab {
+  text-align: left; cursor: pointer; font: inherit; color: inherit; position: relative;
+  transition: transform var(--duration-2) var(--ease), box-shadow var(--duration-2) var(--ease), border-color var(--duration-2) var(--ease);
+}
+.stat-tab:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.stat-tab.active { border: 1.5px solid var(--ucg-navy); box-shadow: var(--shadow); }
+.stat-tab.active::after {
+  content: ''; position: absolute; left: 18px; right: 18px; bottom: 8px;
+  height: 3px; border-radius: 3px; background: var(--ucg-purple);
+}
+.stat-tab.active span { color: var(--fg-primary); }
+[data-panel][hidden] { display: none; }
 .stat-aa { background: var(--bg-inverse); border-color: var(--bg-inverse); }
 .stat-aa span { color: rgba(219, 235, 238, 0.75); }
 .stat-aa strong { color: var(--ucg-blue-green); }
@@ -396,7 +408,13 @@ input::placeholder { color: var(--fg-muted); }
   .layout { grid-template-columns: 1fr; margin-top: 20px; }
   .sidebar { position: static; }
   .athlete-list { max-height: 220px; }
-  .summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .summary { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .stat { padding: 10px 12px; }
+  .stat strong { font-size: 1.8rem; }
+  .stat-tab.active::after { left: 12px; right: 12px; bottom: 6px; }
+  .stat-aa { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; }
 }
 @media (max-width: 640px) {
   .topbar > span { display: none; }
@@ -408,8 +426,8 @@ input::placeholder { color: var(--fg-muted); }
   .brand-app { font-size: 0.78rem; letter-spacing: 0.14em; }
   .layout { padding: 0 16px; }
   .page-head, .signin { padding-left: 16px; padding-right: 16px; }
-  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .stat-aa { grid-column: 1 / -1; }
+  .stat span { font-size: 0.68rem; letter-spacing: 0.1em; }
+  .stat strong { font-size: 1.5rem; }
   .skill-table { padding: 4px 10px; }
   .skill-head { display: none; }
   .skill-row {
