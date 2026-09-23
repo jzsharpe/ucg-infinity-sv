@@ -4,7 +4,7 @@
 import { PDFDocument, StandardFonts, rgb } from 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.esm.min.js';
 import { APPARATUS, EVENTS, EVENT_BONUS, MAX_SKILLS, MIN_SKILLS, scoreAthlete, fmt } from './scoring.js';
 
-// Optional: drop a logo at webapp/assets/logo.png and it replaces the drawn UCG mark.
+// UCG logo (wide lockup). If it's missing, a simple "UCG" mark is drawn instead.
 const LOGO_URL = 'assets/logo.png';
 
 const W = 792;
@@ -14,7 +14,7 @@ const HEAD = rgb(0.25, 0.25, 0.25);
 const WHITE = rgb(1, 1, 1);
 const LINE = rgb(0.35, 0.35, 0.35);
 const MUTED = rgb(0.4, 0.4, 0.4);
-const NAVY = rgb(0.1, 0.2, 0.38);
+const NAVY = rgb(0.125, 0.176, 0.231); // UCG logo colour #202d3b
 const HIGHLIGHT = rgb(0.9, 0.93, 0.98);
 const GOOD = rgb(0.12, 0.48, 0.3);
 
@@ -88,14 +88,22 @@ async function loadLogo(doc) {
   }
 }
 
-function drawLogo(page, p, fonts, logo, cx, cy, r) {
+// Logo on the left, title centred in the space to its right.
+function drawHeader(page, p, fonts, logo, title) {
+  const x = 110;
+  const top = 568;
+  const h = 38;
+  let right = x;
   if (logo) {
-    const s = (r * 2) / Math.max(logo.width, logo.height);
-    page.drawImage(logo, { x: cx - (logo.width * s) / 2, y: cy - (logo.height * s) / 2, width: logo.width * s, height: logo.height * s });
-    return;
+    const w = (logo.width / logo.height) * h;
+    page.drawImage(logo, { x, y: top - h, width: w, height: h });
+    right = x + w;
+  } else {
+    page.drawCircle({ x: x + 19, y: top - 19, size: 19, color: NAVY });
+    p.center('UCG', x + 19, top - 23.5, { size: 12, font: fonts.bold, color: WHITE });
+    right = x + 38;
   }
-  page.drawCircle({ x: cx, y: cy, size: r, color: NAVY, borderColor: rgb(0.55, 0.62, 0.72), borderWidth: 2 });
-  p.center('UCG', cx, cy - 5, { size: 14, font: fonts.bold, color: WHITE });
+  p.center(title, (right + 16 + 700) / 2, top - 26, { size: 18, font: fonts.bold, color: NAVY });
 }
 
 function drawEventPage(doc, fonts, logo, athlete, event, r) {
@@ -104,8 +112,7 @@ function drawEventPage(doc, fonts, logo, athlete, event, r) {
   const ap = APPARATUS[event];
 
   // ---- Title & header line
-  drawLogo(page, p, fonts, logo, 142, 540, 22);
-  p.center('UCG WAG Open Scoring Start Value Worksheet', 420, 532, { size: 20, font: fonts.bold });
+  drawHeader(page, p, fonts, logo, 'WAG Open Start Value Worksheet');
 
   const hy = 488;
   p.text('Gymnast Name:', 110, hy, { size: 10 });
@@ -276,8 +283,7 @@ function drawEventPage(doc, fonts, logo, athlete, event, r) {
 function drawSummaryPage(doc, fonts, logo, athlete, score) {
   const page = doc.addPage([W, H]);
   const p = painter(page, fonts);
-  drawLogo(page, p, fonts, logo, 142, 540, 22);
-  p.center('UCG WAG Open Scoring Start Value Summary', 420, 532, { size: 20, font: fonts.bold });
+  drawHeader(page, p, fonts, logo, 'WAG Open Start Value Summary');
 
   const hy = 488;
   p.text('Gymnast Name:', 110, hy, { size: 10 });

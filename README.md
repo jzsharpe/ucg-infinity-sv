@@ -42,6 +42,6 @@ npm test       # scoring tests (Node 20+)
 
 There's no build step. GitHub Pages serves the files as they are.
 
-## Custom logo
+## Logo
 
-To put a logo on the PDF, add `assets/logo.png`. It replaces the drawn "UCG" circle on every page.
+`assets/logo.png` is the UCG logo that appears at the top of each PDF page. `assets/logo-mark.png` (the starburst) is used as the site icon. Replace either file to change them.

@@ -5,9 +5,9 @@
   --border: #dde1e7;
   --text: #1b1f27;
   --muted: #5d6573;
-  --accent: #1e3a6b;
-  --accent-2: #2f5aa8;
-  --accent-soft: #e6edf8;
+  --accent: #202d3b;
+  --accent-2: #364a60;
+  --accent-soft: #e7ebf0;
   --good: #1f7a4d;
   --good-soft: #e3f3ea;
   --danger: #b3261e;
@@ -24,9 +24,9 @@
     --border: #2f3542;
     --text: #e8eaf0;
     --muted: #9aa3b2;
-    --accent: #8fb0ea;
-    --accent-2: #a9c3f0;
-    --accent-soft: #243250;
+    --accent: #b9c7d8;
+    --accent-2: #d3dde8;
+    --accent-soft: #2a3444;
     --good: #6fd19c;
     --good-soft: #1d3a2b;
     --danger: #f08b84;
@@ -60,12 +60,7 @@ input, select, button { font: inherit; color: inherit; }
   z-index: 5;
 }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; }
-.brand-mark {
-  display: inline-grid; place-items: center;
-  width: 36px; height: 36px; border-radius: 50%;
-  background: var(--accent); color: var(--surface);
-  font-size: 11px; letter-spacing: 0.3px;
-}
+.brand-mark { width: 34px; height: 34px; display: block; }
 .user-area { display: flex; align-items: center; gap: 10px; }
 .avatar { width: 28px; height: 28px; border-radius: 50%; }
 .user-name { color: var(--muted); font-size: 14px; }
@@ -76,6 +71,7 @@ input, select, button { font: inherit; color: inherit; }
 }
 @media (prefers-color-scheme: dark) {
   .banner { background: #3a3014; color: #f3dc98; border-color: #5a4a1c; }
+  .brand-mark { filter: invert(1) brightness(1.6); }
 }
 
 main { padding: 20px; max-width: 1280px; margin: 0 auto; }
@@ -204,12 +200,12 @@ main { padding: 20px; max-width: 1280px; margin: 0 auto; }
 .cg-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; color: var(--muted); flex: 1 1 340px; }
 .cg-list li { display: flex; gap: 8px; align-items: baseline; }
 .cg-badge {
-  display: inline-grid; place-items: center; min-width: 30px; padding: 0 6px; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 30px; padding: 0 6px; border-radius: 6px;
   background: var(--surface-2); border: 1px solid var(--border); font-weight: 700; font-size: 12px; color: var(--muted); white-space: nowrap;
 }
 .cg-list li.earned { color: var(--text); }
 .cg-list li.earned .cg-badge { background: var(--good-soft); border-color: var(--good); color: var(--good); }
-.cg-list li.earned .cg-badge::after { content: ' ✓'; }
+.cg-list li.earned .cg-badge::after { content: '✓'; }
 
 .totals { display: grid; grid-template-columns: repeat(6, auto); gap: 4px 18px; margin: 0; align-self: center; }
 .totals div { display: grid; text-align: right; }
