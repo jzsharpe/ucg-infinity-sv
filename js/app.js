@@ -121,7 +121,7 @@ function renderShell() {
   app.innerHTML = `
     <section class="page-head">
       <div class="page-head-inner">
-        <p class="eyebrow">WAG Open Scoring</p>
+        <p class="eyebrow">UCG Infinity</p>
         <h1>Start value sheets</h1>
       </div>
     </section>

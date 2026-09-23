@@ -1,6 +1,6 @@
-# UCG WAG Open SV Sheets
+# UCG Infinity SV Sheets
 
-A web app for planning UCG WAG Open Scoring routines. Coaches and athletes sign in with Google, add athletes, enter each athlete's vault and bars/beam/floor skills, and get live start values. They can export a filled-in **UCG WAG Open Start Value Worksheet** as a PDF.
+A web app for planning UCG Infinity routines. Coaches and athletes sign in with Google, add athletes, enter each athlete's vault and bars/beam/floor skills, and get live start values. They can export a filled-in **UCG Infinity Start Value Worksheet** as a PDF.
 
 **Live site:** https://jzsharpe.github.io/ucg-infinity-sv/
 
