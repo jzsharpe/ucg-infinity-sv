@@ -114,7 +114,7 @@ function drawEventPage(doc, fonts, logo, athlete, event, r) {
   const ap = APPARATUS[event];
 
   // ---- Title & header line
-  drawHeader(page, p, fonts, logo, 'WAG Open Start Value Worksheet');
+  drawHeader(page, p, fonts, logo, 'UCG Infinity Start Value Worksheet');
 
   const hy = 488;
   p.text('Gymnast Name:', 110, hy, { size: 10 });
@@ -285,7 +285,7 @@ function drawEventPage(doc, fonts, logo, athlete, event, r) {
 function drawSummaryPage(doc, fonts, logo, athlete, score) {
   const page = doc.addPage([W, H]);
   const p = painter(page, fonts);
-  drawHeader(page, p, fonts, logo, 'WAG Open Start Value Summary');
+  drawHeader(page, p, fonts, logo, 'UCG Infinity Start Value Summary');
 
   const hy = 488;
   p.text('Gymnast Name:', 110, hy, { size: 10 });
@@ -361,7 +361,7 @@ export async function exportAthletePdf(athlete, events = EVENTS, { includeSummar
   if (includeSummary) drawSummaryPage(doc, fonts, logo, athlete, score);
   for (const e of events) drawEventPage(doc, fonts, logo, athlete, e, score.events[e]);
 
-  doc.setTitle(`${athlete.name || 'Athlete'} - UCG WAG Open Start Values`);
+  doc.setTitle(`${athlete.name || 'Athlete'} - UCG Infinity Start Values`);
   const bytes = await doc.save();
   return bytes;
 }
