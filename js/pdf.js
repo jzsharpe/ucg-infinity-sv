@@ -2,7 +2,7 @@
 // same layout as the original worksheet plus the UCG event bonus) and a
 // vault / all-around summary page.
 import { PDFDocument, StandardFonts, rgb } from 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.esm.min.js';
-import { APPARATUS, EVENTS, EVENT_BONUS, MAX_EG_SKILLS, MAX_SKILLS, MIN_SKILLS, scoreAthlete, fmt } from './scoring.js';
+import { APPARATUS, EVENTS, EVENT_BONUS, MAX_SKILLS, MIN_SKILLS, scoreAthlete, fmt } from './scoring.js';
 
 // UCG logo (wide lockup). If it's missing, a simple "UCG" mark is drawn instead.
 const LOGO_URL = 'assets/logo.png';
@@ -138,7 +138,14 @@ function drawEventPage(doc, fonts, logo, athlete, event, r) {
   ];
   const tableTop = 468;
   const headH = 36;
-  const rowH = 20;
+  const baseRowH = 20;
+  // EG bonus skills (earn a missing element group, no difficulty) go in extra
+  // rows under skill 8. The table grows into the gap above the totals and the
+  // rows shrink to fit, so the rest of the page stays put.
+  const extras = r.extrasActive ? r.extraRows.filter((x) => x.filled) : [];
+  const rowsArea = MAX_SKILLS * baseRowH + (extras.length ? 20 : 0);
+  const rowH = rowsArea / (MAX_SKILLS + extras.length);
+  const fs = rowH < 18 ? 9 : 10;
   p.box(110, tableTop - headH, 422, headH, { fill: HEAD, border: HEAD });
   for (const c of cols) {
     const n = c.head.length;
@@ -146,94 +153,46 @@ function drawEventPage(doc, fonts, logo, athlete, event, r) {
       p.center(h, c.x + c.w / 2, tableTop - headH / 2 + (n - 1) * 4.5 - i * 9 - 3, { size: 7, font: fonts.bold, color: WHITE })
     );
   }
-  for (let i = 0; i < MAX_SKILLS; i++) {
+  for (let i = 0; i < MAX_SKILLS + extras.length; i++) {
     const y = tableTop - headH - (i + 1) * rowH;
-    const row = r.rows[i];
-    for (const c of cols) p.box(c.x, y, c.w, rowH);
-    const ty = y + 6.5;
-    p.center(String(i + 1), 119, ty, { size: 8 });
+    const extra = i >= MAX_SKILLS;
+    const row = extra ? extras[i - MAX_SKILLS] : r.rows[i];
+    for (const c of cols) p.box(c.x, y, c.w, rowH, { fill: extra ? HIGHLIGHT : undefined });
+    const ty = y + rowH / 2 - 3.5;
+    p.center(extra ? 'EG' : String(i + 1), 119, ty, { size: extra ? 6.5 : 8, font: extra ? fonts.bold : fonts.regular });
     if (!row) continue;
-    p.text(row.name, 132, ty, { size: 9.5, maxWidth: 162 });
-    p.center(row.letter, 318, ty, { size: 10 });
-    if (row.letter) p.center(fmt(row.value), 370, ty, { size: 10 });
-    if (row.condensed) p.center(`${row.condensed} (${row.eg})`, 431, ty, { size: 10 });
-    else if (row.eg) p.center(String(row.eg), 431, ty, { size: 10 });
-    if (row.bonus) p.center(`+${fmt(row.bonus)}`, 496, ty, { size: 10, font: fonts.bold, color: GOOD });
+    p.text(row.name, 132, ty, { size: fs - 0.5, maxWidth: 162 });
+    p.center(row.letter, 318, ty, { size: fs });
+    if (extra) p.center('EG bonus only', 370, ty + 0.5, { size: 6.5, color: MUTED });
+    else if (row.letter) p.center(fmt(row.value), 370, ty, { size: fs });
+    if (row.condensed) p.center(`${row.condensed} (${row.eg})`, 431, ty, { size: fs });
+    else if (row.eg) p.center(String(row.eg), 431, ty, { size: fs });
+    if (row.bonus) p.center(`+${fmt(row.bonus)}`, 496, ty, { size: fs, font: fonts.bold, color: GOOD });
   }
-  const tableBottom = tableTop - headH - MAX_SKILLS * rowH;
+  const tableBottom = tableTop - headH - rowsArea;
+  const totalsTop = tableTop - headH - MAX_SKILLS * baseRowH - 28; // fixed, whatever the row count
 
-  // ---- Right column: event bonus box, plus EG bonus skills when used
+  // ---- Event bonus box (right of the table)
   const ebx = 548;
   const ebw = 152;
-  const extras = r.extrasActive ? r.extraRows.filter((x) => x.filled) : [];
-  const checkbox = (x, y, size, on) => {
-    p.box(x, y, size, size, { thickness: 1, border: INK });
-    if (!on) return;
-    const k = size / 14;
-    page.drawLine({ start: { x: x + 3 * k, y: y + 7 * k }, end: { x: x + 6.5 * k, y: y + 3 * k }, thickness: 2 * k, color: GOOD });
-    page.drawLine({ start: { x: x + 6.5 * k, y: y + 3 * k }, end: { x: x + 12 * k, y: y + 12 * k }, thickness: 2 * k, color: GOOD });
-  };
-
-  if (!extras.length) {
-    p.box(ebx, tableTop - headH, ebw, headH, { fill: HEAD, border: HEAD });
-    p.center(`${ap.short} Event Bonus`, ebx + ebw / 2, tableTop - 15, { size: 9, font: fonts.bold, color: WHITE });
-    p.center(`(+${fmt(EVENT_BONUS)})`, ebx + ebw / 2, tableTop - 27, { size: 8, font: fonts.bold, color: WHITE });
-    const ebBodyTop = tableTop - headH;
-    p.box(ebx, tableBottom, ebw, ebBodyTop - tableBottom);
-    let y = p.wrap(ap.eventBonus, ebx + 10, ebBodyTop - 18, ebw - 20, { size: 10, font: fonts.bold });
-    y -= 14;
-    checkbox(ebx + 10, y - 3, 14, !!r.eventBonus);
-    p.text('Performed', ebx + 30, y, { size: 10 });
-    p.center(r.eventBonus ? `+${fmt(r.eventBonus)}` : '0.0', ebx + ebw / 2, tableBottom + 18, {
-      size: 22,
-      font: fonts.bold,
-      color: r.eventBonus ? GOOD : MUTED,
-    });
-  } else {
-    // Compact event bonus box
-    const ebHead = 22;
-    const ebBody = 70;
-    p.box(ebx, tableTop - ebHead, ebw, ebHead, { fill: HEAD, border: HEAD });
-    p.center(`${ap.short} Event Bonus (+${fmt(EVENT_BONUS)})`, ebx + ebw / 2, tableTop - 14.5, { size: 8.5, font: fonts.bold, color: WHITE });
-    const ebTop = tableTop - ebHead;
-    p.box(ebx, ebTop - ebBody, ebw, ebBody);
-    p.wrap(ap.eventBonus, ebx + 8, ebTop - 13, ebw - 16, { size: 8, font: fonts.bold, lead: 9.5 });
-    const cy = ebTop - ebBody + 9;
-    checkbox(ebx + 8, cy - 2, 11, !!r.eventBonus);
-    p.text('Performed', ebx + 24, cy, { size: 8.5 });
-    const ebVal = r.eventBonus ? `+${fmt(r.eventBonus)}` : '0.0';
-    p.text(ebVal, ebx + ebw - 8 - fonts.bold.widthOfTextAtSize(ebVal, 14), cy - 1, {
-      size: 14,
-      font: fonts.bold,
-      color: r.eventBonus ? GOOD : MUTED,
-    });
-
-    // EG bonus skills: earn element group bonus only, not counted in difficulty
-    const xTop = ebTop - ebBody - 6;
-    const xHead = 28;
-    p.box(ebx, xTop - xHead, ebw, xHead, { fill: HEAD, border: HEAD });
-    p.center('EG Bonus Skills', ebx + ebw / 2, xTop - 12, { size: 8.5, font: fonts.bold, color: WHITE });
-    p.center('(EG bonus only - not counted in difficulty)', ebx + ebw / 2, xTop - 22, { size: 6.3, color: WHITE });
-    const xCols = [
-      { x: ebx, w: 88 },
-      { x: ebx + 88, w: 18 },
-      { x: ebx + 106, w: 26 },
-      { x: ebx + 132, w: 20 },
-    ];
-    const slots = MAX_EG_SKILLS;
-    const xRowH = (xTop - xHead - tableBottom) / slots;
-    for (let i = 0; i < slots; i++) {
-      const y = xTop - xHead - (i + 1) * xRowH;
-      for (const c of xCols) p.box(c.x, y, c.w, xRowH);
-      const row = extras[i];
-      if (!row) continue;
-      const ty = y + xRowH / 2 - 3;
-      p.text(row.name, ebx + 4, ty, { size: 8, maxWidth: 80 });
-      p.center(row.letter, ebx + 97, ty, { size: 8 });
-      p.center(row.condensed ? `${row.condensed} (${row.eg})` : row.eg ?? '', ebx + 119, ty, { size: 7, maxWidth: 24 });
-      if (row.bonus) p.center(`+${fmt(row.bonus)}`, ebx + 142, ty, { size: 7.5, font: fonts.bold, color: GOOD });
-    }
+  p.box(ebx, tableTop - headH, ebw, headH, { fill: HEAD, border: HEAD });
+  p.center(`${ap.short} Event Bonus`, ebx + ebw / 2, tableTop - 15, { size: 9, font: fonts.bold, color: WHITE });
+  p.center(`(+${fmt(EVENT_BONUS)})`, ebx + ebw / 2, tableTop - 27, { size: 8, font: fonts.bold, color: WHITE });
+  const ebBodyTop = tableTop - headH;
+  p.box(ebx, tableBottom, ebw, ebBodyTop - tableBottom);
+  let y = p.wrap(ap.eventBonus, ebx + 10, ebBodyTop - 18, ebw - 20, { size: 10, font: fonts.bold });
+  y -= 14;
+  p.box(ebx + 10, y - 3, 14, 14, { thickness: 1, border: INK });
+  if (r.eventBonus) {
+    page.drawLine({ start: { x: ebx + 13, y: y + 4 }, end: { x: ebx + 16.5, y }, thickness: 2, color: GOOD });
+    page.drawLine({ start: { x: ebx + 16.5, y }, end: { x: ebx + 22, y: y + 9 }, thickness: 2, color: GOOD });
   }
+  p.text('Performed', ebx + 30, y, { size: 10 });
+  p.center(r.eventBonus ? `+${fmt(r.eventBonus)}` : '0.0', ebx + ebw / 2, tableBottom + 18, {
+    size: 22,
+    font: fonts.bold,
+    color: r.eventBonus ? GOOD : MUTED,
+  });
 
   // ---- Totals row
   const totals = [
@@ -247,7 +206,7 @@ function drawEventPage(doc, fonts, logo, athlete, event, r) {
   const ops = ['+', '+', '+', '-', '='];
   const bw = 82;
   const gap = 19.6;
-  const tTop = tableBottom - 28;
+  const tTop = totalsTop;
   const tHead = 14;
   const tBody = 36;
   totals.forEach(([label, val], i) => {
