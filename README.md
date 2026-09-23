@@ -15,6 +15,7 @@ These follow the original *WAG Open Scoring Routine Planning and SV Calculator* 
 | Element group bonus | +0.3 for each condensed element group (I–IV) with a B or higher skill, max +1.2 |
 | Event bonus (UCG) | +0.3 when performed. Bars: minimum of 2 bar changes. Beam: acro series with 2 connected flight elements on beam. Floor: acro pass with at least 2 connected saltos (direct or indirect). |
 | Short routine | −1.0 for each skill under 6 |
+| EG bonus skills | Once all 8 skill slots are filled and a condensed group is still missing, extra skills can be listed only to earn that group's +0.3. They add no difficulty. Shown on the PDF only when used. |
 | Vault | D score from the vault reference table + 10.0 |
 
 The rules are in [`js/scoring.js`](js/scoring.js) and the vault table is in [`js/vaults.js`](js/vaults.js).

@@ -6,6 +6,8 @@ import { VAULTS } from './vaults.js';
 export const EXECUTION = 10;
 export const MAX_SKILLS = 8;
 export const MIN_SKILLS = 6;
+// Extra skills listed only to earn an element group bonus (one per condensed group at most).
+export const MAX_EG_SKILLS = 4;
 export const EG_BONUS = 0.3;
 export const EG_BONUS_MIN_VALUE = 0.3; // B or higher
 export const EVENT_BONUS = 0.3;
@@ -87,28 +89,40 @@ const isFilled = (s) => s && (String(s.name || '').trim() || s.letter);
  * Score a bars/beam/floor routine.
  * skills: [{ name, letter, eg }]
  * eventBonus: true if the apparatus-specific bonus requirement was performed.
- * Returns per-skill rows (in routine order) and totals.
+ * egSkills: extra skills performed only for an element group bonus. They only
+ *   apply once all MAX_SKILLS counting slots are filled and the counting skills
+ *   miss at least one condensed group; then they can earn EG bonus for the
+ *   missing groups, but add nothing to difficulty.
+ * Returns per-skill rows (in routine order), extraRows (aligned with egSkills,
+ * blanks included) and totals.
  */
-export function scoreRoutine(event, skills = [], { eventBonus = false } = {}) {
-  const filled = skills.filter(isFilled).slice(0, MAX_SKILLS);
-
-  const rows = filled.map((s) => ({
+export function scoreRoutine(event, skills = [], { eventBonus = false, egSkills = [] } = {}) {
+  const toRow = (s) => ({
     name: String(s.name || '').trim(),
     letter: s.letter || '',
     value: letterValue(s.letter),
     eg: s.eg ? Number(s.eg) : null,
     condensed: s.eg ? condensedGroupOf(event, s.eg) : null,
     bonus: 0,
-  }));
+  });
+  const rows = skills.filter(isFilled).slice(0, MAX_SKILLS).map(toRow);
+  const extraRows = egSkills.slice(0, MAX_EG_SKILLS).map((s) => ({ ...toRow(s), filled: !!isFilled(s) }));
 
-  // One +0.3 per condensed group, credited to the first qualifying skill.
+  // One +0.3 per condensed group, credited to the first qualifying skill —
+  // counting skills first, then EG-only skills.
   const earned = new Set();
-  for (const r of rows) {
-    if (r.condensed && r.value >= EG_BONUS_MIN_VALUE && !earned.has(r.condensed)) {
-      earned.add(r.condensed);
-      r.bonus = EG_BONUS;
+  const credit = (list) => {
+    for (const r of list) {
+      if (r.condensed && r.value >= EG_BONUS_MIN_VALUE && !earned.has(r.condensed)) {
+        earned.add(r.condensed);
+        r.bonus = EG_BONUS;
+      }
     }
-  }
+  };
+  credit(rows);
+  const missingGroups = Object.keys(APPARATUS[event].condensed).length - earned.size;
+  const extrasActive = rows.length === MAX_SKILLS && missingGroups > 0;
+  if (extrasActive) credit(extraRows);
 
   const difficulty = round1(rows.reduce((t, r) => t + r.value, 0));
   const egTotal = round1(earned.size * EG_BONUS);
@@ -120,6 +134,9 @@ export function scoreRoutine(event, skills = [], { eventBonus = false } = {}) {
 
   return {
     rows,
+    extraRows,
+    extrasActive,
+    extraSlots: extrasActive ? missingGroups : 0, // how many EG-only skills could still help
     difficulty,
     egTotal,
     eventBonus: eventBonusTotal,
@@ -143,7 +160,10 @@ export function scoreAthlete(athlete) {
   const events = Object.fromEntries(
     EVENTS.map((e) => [
       e,
-      scoreRoutine(e, athlete.routines?.[e] || [], { eventBonus: !!athlete.eventBonus?.[e] }),
+      scoreRoutine(e, athlete.routines?.[e] || [], {
+        eventBonus: !!athlete.eventBonus?.[e],
+        egSkills: athlete.egSkills?.[e] || [],
+      }),
     ])
   );
   const allAround = round1(

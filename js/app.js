@@ -5,7 +5,9 @@ import {
   EVENTS,
   LETTERS,
   MAX_SKILLS,
+  MAX_EG_SKILLS,
   MIN_SKILLS,
+  EG_BONUS_MIN_VALUE,
   EVENT_BONUS,
   fmt,
   scoreAthlete,
@@ -27,6 +29,7 @@ const newAthlete = () => ({
   vault: '',
   routines: Object.fromEntries(EVENTS.map((e) => [e, blankRoutine()])),
   eventBonus: Object.fromEntries(EVENTS.map((e) => [e, false])),
+  egSkills: Object.fromEntries(EVENTS.map((e) => [e, []])),
   createdAt: Date.now(),
 });
 
@@ -34,7 +37,9 @@ const newAthlete = () => ({
 function normalize(a) {
   a.routines ||= {};
   a.eventBonus ||= {};
+  a.egSkills ||= {};
   for (const e of EVENTS) {
+    a.egSkills[e] = (a.egSkills[e] || []).slice(0, MAX_EG_SKILLS);
     const r = a.routines[e] || [];
     a.routines[e] = [...r, ...blankRoutine()].slice(0, MAX_SKILLS);
   }
@@ -205,18 +210,27 @@ function vaultOptions(current) {
   );
 }
 
-function skillRow(event, i, s) {
+// extra = an EG-only skill (earns element group bonus, not counted in difficulty).
+function skillRow(event, i, s, extra = false) {
   const groups = APPARATUS[event].groups;
+  const label = extra ? `EG bonus skill ${i + 1}` : `Skill ${i + 1}`;
+  const data = `data-event="${event}" data-idx="${i}"${extra ? ' data-list="eg"' : ''}`;
   return `
-    <div class="skill-row" data-row="${i}">
-      <span class="col-num">${i + 1}</span>
-      <input class="col-name" type="text" placeholder="Skill name" aria-label="Skill ${i + 1} name"
-        data-event="${event}" data-idx="${i}" data-field="name" value="${esc(s.name)}" />
-      <select class="col-letter" aria-label="Skill ${i + 1} difficulty" data-event="${event}" data-idx="${i}" data-field="letter">
+    <div class="skill-row${extra ? ' extra-row' : ''}" ${extra ? 'data-extra-row' : 'data-row'}="${i}">
+      ${
+        extra
+          ? `<button type="button" class="remove-eg" data-remove-eg="${event}" data-idx="${i}" aria-label="Remove ${label}" title="Remove">
+               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+             </button>`
+          : `<span class="col-num">${i + 1}</span>`
+      }
+      <input class="col-name" type="text" placeholder="${extra ? 'EG bonus skill' : 'Skill name'}" aria-label="${label} name"
+        ${data} data-field="name" value="${esc(s.name)}" />
+      <select class="col-letter" aria-label="${label} difficulty" ${data} data-field="letter">
         <option value="">–</option>
         ${LETTERS.map((l) => `<option${l === s.letter ? ' selected' : ''}>${l}</option>`).join('')}
       </select>
-      <select class="col-eg" aria-label="Skill ${i + 1} element group" data-event="${event}" data-idx="${i}" data-field="eg">
+      <select class="col-eg" aria-label="${label} element group" ${data} data-field="eg">
         <option value="">EG –</option>
         ${Object.entries(groups)
           .map(([n, label]) => `<option value="${n}"${String(n) === String(s.eg) ? ' selected' : ''}>${n}. ${esc(label)}</option>`)
@@ -225,7 +239,50 @@ function skillRow(event, i, s) {
       <span class="col-value calc" data-calc="value"></span>
       <span class="col-cg calc" data-calc="cg"></span>
       <span class="col-bonus calc" data-calc="bonus"></span>
+      ${extra ? '<span class="extra-note" data-calc="note"></span>' : ''}
     </div>`;
+}
+
+function extrasSection(event, athlete) {
+  const list = athlete.egSkills[event];
+  return `
+    <div class="eg-extras-head">
+      <div>
+        <span class="label">EG bonus skills</span>
+        <p class="hint">Extra skills that earn an element group bonus but don't count toward your ${MAX_SKILLS} skills or difficulty.</p>
+      </div>
+      <button class="btn btn-ghost btn-sm" type="button" data-add-eg="${event}">Add EG skill</button>
+    </div>
+    <p class="eg-extras-locked" hidden></p>
+    ${list.length ? `<div class="skill-table extras-table">${list.map((s, i) => skillRow(event, i, s, true)).join('')}</div>` : ''}`;
+}
+
+function rerenderExtras(event, focusIdx) {
+  const el = $(`[data-extras="${event}"]`);
+  el.innerHTML = extrasSection(event, selected());
+  updateComputed();
+  if (focusIdx != null) $(`[data-extra-row="${focusIdx}"] .col-name`, el)?.focus();
+  else $(`[data-add-eg="${event}"]`, el)?.focus();
+}
+
+function onEditorClick(ev) {
+  const a = selected();
+  const add = ev.target.closest('[data-add-eg]');
+  if (add) {
+    const e = add.dataset.addEg;
+    if (a.egSkills[e].length >= scoreAthlete(a).events[e].extraSlots) return;
+    a.egSkills[e].push({ name: '', letter: '', eg: '' });
+    rerenderExtras(e, a.egSkills[e].length - 1);
+    scheduleSave();
+    return;
+  }
+  const remove = ev.target.closest('[data-remove-eg]');
+  if (remove) {
+    const e = remove.dataset.removeEg;
+    a.egSkills[e].splice(Number(remove.dataset.idx), 1);
+    rerenderExtras(e);
+    scheduleSave();
+  }
 }
 
 function eventCard(event, athlete) {
@@ -259,6 +316,7 @@ function eventCard(event, athlete) {
         </div>
         ${athlete.routines[event].map((s, i) => skillRow(event, i, s)).join('')}
       </div>
+      <section class="eg-extras" data-extras="${event}">${extrasSection(event, athlete)}</section>
       <label class="event-bonus">
         <input type="checkbox" data-bonus="${event}"${athlete.eventBonus?.[event] ? ' checked' : ''} />
         <span class="event-bonus-text"><strong>Event bonus +${fmt(EVENT_BONUS)}</strong><span>${esc(ap.eventBonus)}</span></span>
@@ -345,6 +403,7 @@ function renderEditor() {
   $$('[data-export]', ed).forEach((b) => (b.onclick = () => runExport(b, [b.dataset.export], false)));
 
   ed.oninput = onSkillInput;
+  ed.onclick = onEditorClick;
   updateComputed();
 }
 
@@ -358,7 +417,8 @@ function onSkillInput(ev) {
     return;
   }
   if (!t.dataset.event) return;
-  a.routines[t.dataset.event][Number(t.dataset.idx)][t.dataset.field] = t.value;
+  const list = t.dataset.list === 'eg' ? a.egSkills : a.routines;
+  list[t.dataset.event][Number(t.dataset.idx)][t.dataset.field] = t.value;
   updateComputed();
   scheduleSave();
 }
@@ -396,6 +456,38 @@ function updateComputed() {
       $('[data-calc="cg"]', rowEl).textContent = res?.condensed ?? '';
       $('[data-calc="bonus"]', rowEl).textContent = res?.bonus ? `+${fmt(res.bonus)}` : '';
       rowEl.classList.toggle('has-bonus', !!res?.bonus);
+    });
+    // EG-only skills unlock only when all counting slots are filled and the
+    // counting skills are still missing an element group bonus.
+    const extrasEl = $(`[data-extras="${e}"]`, card);
+    const hasExtras = a.egSkills[e].length > 0;
+    extrasEl.hidden = !r.extrasActive && !hasExtras;
+    $('[data-add-eg]', extrasEl).hidden = !r.extrasActive || a.egSkills[e].length >= r.extraSlots;
+    const locked = $('.eg-extras-locked', extrasEl);
+    locked.hidden = r.extrasActive || !hasExtras;
+    locked.textContent =
+      r.rows.length < MAX_SKILLS
+        ? `Fill all ${MAX_SKILLS} skill slots above to use EG bonus skills. These are saved but not counting.`
+        : 'Your counting skills already earn every element group bonus, so these aren\'t needed. They\'re saved but not counting.';
+    extrasEl.classList.toggle('inactive', !r.extrasActive);
+
+    // EG-only skills: no difficulty value; explain when one doesn't earn a bonus.
+    r.extraRows.forEach((res, i) => {
+      const rowEl = $(`[data-extra-row="${i}"]`, card);
+      if (!rowEl) return;
+      const bonusEl = $('[data-calc="bonus"]', rowEl);
+      $('[data-calc="value"]', rowEl).textContent = res.filled ? '—' : '';
+      $('[data-calc="cg"]', rowEl).textContent = res.condensed ?? '';
+      let reason = '';
+      if (res.filled && !res.bonus && r.extrasActive) {
+        if (!res.condensed) reason = 'Pick an element group';
+        else if (res.value < EG_BONUS_MIN_VALUE) reason = 'Needs a B or higher';
+        else reason = `Group ${res.condensed} already earned`;
+      }
+      bonusEl.textContent = res.bonus ? `+${fmt(res.bonus)}` : res.filled && r.extrasActive ? '0.0' : '';
+      bonusEl.title = reason;
+      $('[data-calc="note"]', rowEl).textContent = reason;
+      rowEl.classList.toggle('has-bonus', !!res.bonus);
     });
     $$('.cg-list li', card).forEach((li) => li.classList.toggle('earned', r.earnedGroups.includes(li.dataset.cg)));
     $('[data-total="difficulty"]', card).textContent = fmt(r.difficulty);

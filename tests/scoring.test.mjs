@@ -76,3 +76,48 @@ test('event bonus adds +0.3 when performed', () => {
 test('event bonus alone does not score an empty routine', () => {
   assert.equal(scoreRoutine('floor', [], { eventBonus: true }).startValue, 0);
 });
+
+// Eight C skills covering groups I, II and III only.
+const allC = [
+  s('a', 'C', 1), s('b', 'C', 2), s('c', 'C', 3), s('d', 'C', 6),
+  s('e', 'C', 7), s('f', 'C', 8), s('g', 'C', 2), s('h', 'C', 3),
+];
+
+test('EG-only skill earns a missing group without adding difficulty', () => {
+  const without = scoreRoutine('bars', allC);
+  assert.equal(without.egTotal, 0.9);
+  const r = scoreRoutine('bars', allC, { egSkills: [s('Giant', 'B', 4)] });
+  assert.equal(r.difficulty, 4.0);
+  assert.equal(r.egTotal, 1.2);
+  assert.equal(r.extraRows[0].bonus, 0.3);
+  assert.equal(r.startValue, 15.2);
+});
+
+test('EG-only skill in an already-earned group, or below B, earns nothing', () => {
+  const r = scoreRoutine('bars', allC, { egSkills: [s('x', 'D', 1), s('y', 'A', 4)] });
+  assert.equal(r.egTotal, 0.9);
+  assert.deepEqual(r.extraRows.map((x) => x.bonus), [0, 0]);
+});
+
+test('EG-only skills are ignored unless all 8 counting slots are filled', () => {
+  const r = scoreRoutine('bars', allC.slice(0, 7), { egSkills: [s('Giant', 'B', 4)] });
+  assert.equal(r.extrasActive, false);
+  assert.equal(r.extraRows[0].bonus, 0);
+  assert.equal(r.egTotal, 0.9);
+});
+
+test('athlete EG-only skills flow through scoreAthlete', () => {
+  const r = scoreAthlete({ routines: { bars: allC }, egSkills: { bars: [s('Giant', 'B', 4)] } });
+  assert.equal(r.events.bars.egTotal, 1.2);
+});
+
+test('EG-only skills stay locked when counting skills already earn every group', () => {
+  const r = scoreRoutine('bars', bars, { egSkills: [s('Giant', 'B', 4)] });
+  assert.equal(r.egTotal, 1.2);
+  assert.equal(r.extrasActive, false);
+  assert.equal(r.extraRows[0].bonus, 0);
+});
+
+test('extraSlots is the number of groups still missing', () => {
+  assert.equal(scoreRoutine('bars', allC).extraSlots, 1);
+});
