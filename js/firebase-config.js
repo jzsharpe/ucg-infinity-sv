@@ -1,12 +1,11 @@
-// Paste your Firebase web app config here (Firebase console → Project settings →
-// General → Your apps → Web app → SDK setup and configuration → "Config").
+// Firebase web app config (Firebase console → Project settings → General → Your apps).
 // These values are safe to publish; access is protected by firestore.rules.
-//
-// While these are left as placeholders, the app runs in "local mode":
-// no sign-in, and athletes are saved only in this browser.
+// Only export the config object here — js/store.js loads the Firebase SDK itself.
 export const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT.firebaseapp.com',
-  projectId: 'YOUR_PROJECT',
-  appId: 'YOUR_APP_ID',
+  apiKey: 'AIzaSyCH6kZhkhyDMykfOWFk_ltyzXAnxMkGKkI',
+  authDomain: 'ucg-infinity-sv-generator.firebaseapp.com',
+  projectId: 'ucg-infinity-sv-generator',
+  storageBucket: 'ucg-infinity-sv-generator.firebasestorage.app',
+  messagingSenderId: '313388704446',
+  appId: '1:313388704446:web:3223b5aba9385132fcf4ef',
 };
