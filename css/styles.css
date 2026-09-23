@@ -262,11 +262,10 @@ input::placeholder { color: var(--fg-muted); }
 /* ---- Editor header ---- */
 .editor-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .fields { display: flex; flex-wrap: wrap; gap: 16px; flex: 1 1 440px; }
-#f-name {
+#f-name, #f-club {
   font-family: var(--font-display); font-weight: 700; text-transform: uppercase;
   font-size: 1.6rem; letter-spacing: var(--tracking-display); padding: 8px 18px; background-color: var(--ucg-white);
 }
-#f-club { background-color: var(--ucg-white); padding-top: 13px; padding-bottom: 13px; }
 .editor-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .save-status { font-size: var(--fs-xs); color: var(--fg-muted); min-width: 110px; text-align: right; }
 .save-status[data-kind='ok'] { color: var(--fg-accent); }
