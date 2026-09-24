@@ -478,8 +478,7 @@ input::placeholder { color: var(--fg-muted); }
   .skill-row .col-bonus, .skill-row .remove-skill { grid-column: auto; }
   .skill-row .row-flag { grid-row: 3; grid-column: 2 / span 2; justify-self: start; }
   .skill-row.is-repeat .row-flag,
-  .skill-row.non-counting:not(.has-bonus) .row-flag { grid-column: 2 / span 4; justify-self: center; }
-  .skill-row.non-counting.has-bonus .row-flag { justify-self: center; }
+  .skill-row.non-counting:not(.has-bonus) .row-flag { grid-column: 2 / span 4; }
   .routine-help { margin: 12px 14px 2px; }
   .routine-actions { margin: 6px 14px 14px; }
   .skill-row .col-name { grid-area: name; }
@@ -490,6 +489,7 @@ input::placeholder { color: var(--fg-muted); }
   .skill-row .col-bonus { grid-area: bonus; }
   .skill-row .col-value:not(:empty)::before { content: 'Value '; color: var(--fg-muted); font-size: var(--fs-micro); }
   .skill-row .col-cg:not(:empty)::before { content: 'CEG '; color: var(--fg-muted); font-size: var(--fs-micro); }
+  .skill-row .col-bonus:not(:empty)::before { content: 'Bonus '; color: var(--fg-muted); font-size: var(--fs-micro); font-weight: 400; }
   .event-bonus { margin: 6px 14px 14px; }
   .totals { grid-template-columns: repeat(3, auto); }
   .editor-actions { width: 100%; }
