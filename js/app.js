@@ -592,14 +592,14 @@ function updateComputed() {
         ? `Repeat of Skill ${it.repeatOf + 1}`
         : nonCounting
           ? it.bonus
-            ? 'EG Credit Only'
+            ? `EG ${it.condensed} Credit Only`
             : `Not in Top ${MAX_SKILLS}`
           : '';
       flagEl.title = repeat
         ? `Repeat of skill ${it.repeatOf + 1}: each skill only counts once`
         : nonCounting
           ? it.bonus
-            ? `Not in your top ${MAX_SKILLS}, so it adds no difficulty, but it earns element group credit (+0.3)`
+            ? `Not in your top ${MAX_SKILLS}, so it adds no difficulty, but it earns the element group ${it.condensed} credit (+0.3)`
             : `Not in your top ${MAX_SKILLS}, so it doesn't count toward difficulty`
           : '';
     }
