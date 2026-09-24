@@ -1,6 +1,8 @@
-// Draws the UCG WAG Open Start Value Worksheet (one landscape page per event,
-// same layout as the original worksheet plus the UCG event bonus) and a
-// vault / all-around summary page.
+// Draws the UCG Infinity Start Value Worksheet (one landscape page per event,
+// same layout as the original WAG Open worksheet plus the UCG event bonus) and
+// a vault / all-around summary page. Each event page lists the 8 counting
+// skills, plus any non-counting skill that earns element group credit;
+// repeated and other non-counting skills are left off.
 import { PDFDocument, StandardFonts, rgb } from 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.esm.min.js';
 import { APPARATUS, EVENTS, EVENT_BONUS, MAX_SKILLS, MIN_SKILLS, scoreAthlete, fmt } from './scoring.js';
 
@@ -139,10 +141,10 @@ function drawEventPage(doc, fonts, logo, athlete, event, r) {
   const tableTop = 468;
   const headH = 36;
   const baseRowH = 20;
-  // EG bonus skills (earn a missing element group, no difficulty) go in extra
-  // rows under skill 8. The table grows into the gap above the totals and the
-  // rows shrink to fit, so the rest of the page stays put.
-  const extras = r.extrasActive ? r.extraRows.filter((x) => x.filled) : [];
+  // Non-counting skills that earn element group credit (no difficulty) go in
+  // extra rows under skill 8. The table grows into the gap above the totals and
+  // the rows shrink to fit, so the rest of the page stays put.
+  const extras = r.extraRows;
   const rowsArea = MAX_SKILLS * baseRowH + (extras.length ? 20 : 0);
   const rowH = rowsArea / (MAX_SKILLS + extras.length);
   const fs = rowH < 18 ? 9 : 10;

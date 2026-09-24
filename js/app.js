@@ -5,9 +5,8 @@ import {
   EVENTS,
   LETTERS,
   MAX_SKILLS,
-  MAX_EG_SKILLS,
+  MAX_ROUTINE,
   MIN_SKILLS,
-  EG_BONUS_MIN_VALUE,
   EVENT_BONUS,
   fmt,
   scoreAthlete,
@@ -31,7 +30,9 @@ function readTab() {
   }
 }
 
-const blankRoutine = () => Array.from({ length: MAX_SKILLS }, () => ({ name: '', letter: '', eg: '' }));
+const blankSkill = () => ({ name: '', letter: '', eg: '' });
+const blankRoutine = () => Array.from({ length: MAX_SKILLS }, blankSkill);
+const isBlank = (s) => !String(s?.name || '').trim() && !s?.letter;
 const newAthlete = () => ({
   id: store.newId(),
   name: '',
@@ -39,21 +40,34 @@ const newAthlete = () => ({
   vault: '',
   routines: Object.fromEntries(EVENTS.map((e) => [e, blankRoutine()])),
   eventBonus: Object.fromEntries(EVENTS.map((e) => [e, false])),
-  egSkills: Object.fromEntries(EVENTS.map((e) => [e, []])),
   createdAt: Date.now(),
 });
 
-// Older/partial records: make sure every event has MAX_SKILLS rows.
+// Older/partial records: every routine shows at least MAX_SKILLS rows.
+// Records from before routines could hold non-counting skills kept separate
+// "EG bonus skills" (egSkills); those move to the end of the routine, where a
+// non-counting skill earns the same element group credit. Returns true if the
+// record changed and should be saved.
 function normalize(a) {
+  let migrated = false;
   a.routines ||= {};
   a.eventBonus ||= {};
-  a.egSkills ||= {};
   for (const e of EVENTS) {
-    a.egSkills[e] = (a.egSkills[e] || []).slice(0, MAX_EG_SKILLS);
-    const r = a.routines[e] || [];
-    a.routines[e] = [...r, ...blankRoutine()].slice(0, MAX_SKILLS);
+    let r = [...(a.routines[e] || [])];
+    const extra = (a.egSkills?.[e] || []).filter((x) => !isBlank(x));
+    if (extra.length) {
+      while (r.length && isBlank(r[r.length - 1])) r.pop();
+      r.push(...extra);
+      migrated = true;
+    }
+    while (r.length < MAX_SKILLS) r.push(blankSkill());
+    a.routines[e] = r.slice(0, MAX_ROUTINE);
   }
-  return a;
+  if ('egSkills' in a) {
+    delete a.egSkills;
+    migrated = true;
+  }
+  return migrated;
 }
 
 const selected = () => state.athletes.find((a) => a.id === state.selectedId);
@@ -220,21 +234,21 @@ function vaultOptions(current) {
   );
 }
 
-// extra = an EG-only skill (earns element group bonus, not counted in difficulty).
-function skillRow(event, i, s, extra = false) {
+const ICON_GRIP = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>`;
+const ICON_X = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+
+function skillRow(event, i, s) {
   const groups = APPARATUS[event].groups;
-  const label = extra ? `EG bonus skill ${i + 1}` : `Skill ${i + 1}`;
-  const data = `data-event="${event}" data-idx="${i}"${extra ? ' data-list="eg"' : ''}`;
+  const label = `Skill ${i + 1}`;
+  const data = `data-event="${event}" data-idx="${i}"`;
   return `
-    <div class="skill-row${extra ? ' extra-row' : ''}" ${extra ? 'data-extra-row' : 'data-row'}="${i}">
-      ${
-        extra
-          ? `<button type="button" class="remove-eg" data-remove-eg="${event}" data-idx="${i}" aria-label="Remove ${label}" title="Remove">
-               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-             </button>`
-          : `<span class="col-num">${i + 1}</span>`
-      }
-      <input class="col-name" type="text" placeholder="${extra ? 'EG bonus skill' : 'Skill name'}" aria-label="${label} name"
+    <div class="skill-row" data-row="${i}">
+      <span class="col-num">
+        <button type="button" class="drag-handle" data-drag="${event}" data-idx="${i}"
+          aria-label="Move ${label}. Drag, or use the up and down arrow keys." title="Drag to reorder">${ICON_GRIP}</button>
+        <span class="num">${i + 1}</span>
+      </span>
+      <input class="col-name" type="text" placeholder="Skill name" aria-label="${label} name"
         ${data} data-field="name" value="${esc(s.name)}" />
       <select class="col-letter" aria-label="${label} difficulty" ${data} data-field="letter">
         <option value="">–</option>
@@ -243,57 +257,136 @@ function skillRow(event, i, s, extra = false) {
       <select class="col-eg" aria-label="${label} element group" ${data} data-field="eg">
         <option value="">EG –</option>
         ${Object.entries(groups)
-          .map(([n, label]) => `<option value="${n}"${String(n) === String(s.eg) ? ' selected' : ''}>${n}. ${esc(label)}</option>`)
+          .map(([n, g]) => `<option value="${n}"${String(n) === String(s.eg) ? ' selected' : ''}>${n}. ${esc(g)}</option>`)
           .join('')}
       </select>
       <span class="col-value calc" data-calc="value"></span>
       <span class="col-cg calc" data-calc="cg"></span>
       <span class="col-bonus calc" data-calc="bonus"></span>
-      ${extra ? '<span class="extra-note" data-calc="note"></span>' : ''}
+      <button type="button" class="remove-skill" data-remove-skill="${event}" data-idx="${i}" aria-label="Remove ${label}" title="Remove skill">${ICON_X}</button>
+      <span class="row-note" data-calc="note"></span>
     </div>`;
 }
 
-function extrasSection(event, athlete) {
-  const list = athlete.egSkills[event];
+function routineRows(event, athlete) {
   return `
-    <div class="eg-extras-head">
-      <div>
-        <span class="label">EG bonus skills</span>
-        <p class="hint">Extra skills that earn an element group bonus but don't count toward your ${MAX_SKILLS} skills or difficulty.</p>
-      </div>
-      <button class="btn btn-ghost btn-sm" type="button" data-add-eg="${event}">Add EG skill</button>
+    <div class="skill-row skill-head" aria-hidden="true">
+      <span class="col-num">#</span>
+      <span class="col-name">Skill</span>
+      <span class="col-letter">Diff.</span>
+      <span class="col-eg">Element group</span>
+      <span class="col-value">Value</span>
+      <span class="col-cg">CEG</span>
+      <span class="col-bonus">Bonus</span>
+      <span></span>
     </div>
-    <p class="eg-extras-locked" hidden></p>
-    ${list.length ? `<div class="skill-table extras-table">${list.map((s, i) => skillRow(event, i, s, true)).join('')}</div>` : ''}`;
+    ${athlete.routines[event].map((s, i) => skillRow(event, i, s)).join('')}`;
 }
 
-function rerenderExtras(event, focusIdx) {
-  const el = $(`[data-extras="${event}"]`);
-  el.innerHTML = extrasSection(event, selected());
+// Re-draw one event's routine (after add / remove / reorder) and optionally
+// focus something in it: { row, part: 'name' | 'handle' } or 'add'.
+function renderRoutine(event, focus) {
+  const a = selected();
+  $(`[data-routine="${event}"]`).innerHTML = routineRows(event, a);
   updateComputed();
-  if (focusIdx != null) $(`[data-extra-row="${focusIdx}"] .col-name`, el)?.focus();
-  else $(`[data-add-eg="${event}"]`, el)?.focus();
+  if (focus === 'add') $(`[data-add-skill="${event}"]`)?.focus();
+  else if (focus) {
+    const row = $(`[data-routine="${event}"] [data-row="${focus.row}"]`);
+    $(focus.part === 'handle' ? '.drag-handle' : '.col-name', row)?.focus();
+  }
+}
+
+function moveSkill(event, from, to, focusPart) {
+  const list = selected().routines[event];
+  if (to < 0 || to >= list.length || to === from) return;
+  const [skill] = list.splice(from, 1);
+  list.splice(to, 0, skill);
+  renderRoutine(event, { row: to, part: focusPart });
+  scheduleSave();
 }
 
 function onEditorClick(ev) {
   const a = selected();
-  const add = ev.target.closest('[data-add-eg]');
+  const add = ev.target.closest('[data-add-skill]');
   if (add) {
-    const e = add.dataset.addEg;
-    if (a.egSkills[e].length >= scoreAthlete(a).events[e].extraSlots) return;
-    a.egSkills[e].push({ name: '', letter: '', eg: '' });
-    rerenderExtras(e, a.egSkills[e].length - 1);
+    const e = add.dataset.addSkill;
+    const list = a.routines[e];
+    if (list.length >= MAX_ROUTINE) return;
+    list.push(blankSkill());
+    renderRoutine(e, { row: list.length - 1, part: 'name' });
     scheduleSave();
     return;
   }
-  const remove = ev.target.closest('[data-remove-eg]');
+  const remove = ev.target.closest('[data-remove-skill]');
   if (remove) {
-    const e = remove.dataset.removeEg;
-    a.egSkills[e].splice(Number(remove.dataset.idx), 1);
-    rerenderExtras(e);
+    const e = remove.dataset.removeSkill;
+    const list = a.routines[e];
+    const i = Number(remove.dataset.idx);
+    list.splice(i, 1);
+    if (list.length < MAX_SKILLS) list.push(blankSkill());
+    renderRoutine(e, { row: Math.min(i, list.length - 1), part: 'name' });
     scheduleSave();
   }
 }
+
+function onEditorKey(ev) {
+  const h = ev.target.closest('.drag-handle');
+  if (!h || (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown')) return;
+  ev.preventDefault();
+  const from = Number(h.dataset.idx);
+  moveSkill(h.dataset.drag, from, from + (ev.key === 'ArrowUp' ? -1 : 1), 'handle');
+}
+
+// Drag to reorder: pointer events, so it works with a mouse and on touch screens.
+function onEditorPointerDown(ev) {
+  const handle = ev.target.closest('.drag-handle');
+  if (!handle || ev.button > 0) return;
+  ev.preventDefault();
+  const event = handle.dataset.drag;
+  const from = Number(handle.dataset.idx);
+  const container = $(`[data-routine="${event}"]`);
+  const rows = $$('.skill-row[data-row]', container);
+  const dragged = rows[from];
+  const others = rows.filter((r) => r !== dragged);
+  const pageMid = (r) => {
+    const b = r.getBoundingClientRect();
+    return b.top + scrollY + b.height / 2;
+  };
+  const mids = others.map(pageMid);
+  const startY = ev.clientY + scrollY;
+  let to = from;
+
+  dragged.classList.add('dragging');
+
+  const clearMarks = () => others.forEach((r) => r.classList.remove('drop-above', 'drop-below'));
+  const move = (m) => {
+    if (m.clientY < 90) scrollBy(0, -12);
+    else if (m.clientY > innerHeight - 60) scrollBy(0, 12);
+    const y = m.clientY + scrollY;
+    dragged.style.transform = `translateY(${y - startY}px)`;
+    to = mids.filter((mid) => mid < y).length;
+    clearMarks();
+    if (to === from) return;
+    if (to < others.length) others[to].classList.add('drop-above');
+    else others[others.length - 1].classList.add('drop-below');
+  };
+  const end = () => {
+    removeEventListener('pointermove', move);
+    removeEventListener('pointerup', end);
+    removeEventListener('pointercancel', end);
+    clearMarks();
+    dragged.classList.remove('dragging');
+    dragged.style.transform = '';
+    if (to !== from) moveSkill(event, from, to, 'handle');
+  };
+  addEventListener('pointermove', move);
+  addEventListener('pointerup', end);
+  addEventListener('pointercancel', end);
+}
+
+const EXPORT_TIP =
+  'Exports the 8 counting skills for each event, plus any non-counting skill that earns element group credit. ' +
+  'Repeated skills and other non-counting skills are left off the worksheet.';
 
 function eventCard(event, athlete) {
   const ap = APPARATUS[event];
@@ -311,22 +404,19 @@ function eventCard(event, athlete) {
         <h2 class="card-title">${ap.label}</h2>
         <div class="card-head-right">
           <span class="sv-pill" data-sv="${event}"></span>
-          <button class="btn btn-ghost btn-sm" type="button" data-export="${event}">Export PDF</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-export="${event}" title="${EXPORT_TIP}">Export PDF</button>
         </div>
       </header>
-      <div class="skill-table">
-        <div class="skill-row skill-head">
-          <span class="col-num">#</span>
-          <span class="col-name">Skill</span>
-          <span class="col-letter">Diff.</span>
-          <span class="col-eg">Element group</span>
-          <span class="col-value">Value</span>
-          <span class="col-cg">CEG</span>
-          <span class="col-bonus">Bonus</span>
-        </div>
-        ${athlete.routines[event].map((s, i) => skillRow(event, i, s)).join('')}
+      <p class="routine-help">
+        List the whole routine in order, and drag <span class="grip-inline">${ICON_GRIP}</span> to reorder.
+        <strong>Each skill counts only once</strong>: repeats are marked in red and don't count.
+        Your ${MAX_SKILLS} highest-value skills count toward difficulty; any others are greyed out as non-counting skills.
+      </p>
+      <div class="skill-table" data-routine="${event}">${routineRows(event, athlete)}</div>
+      <div class="routine-actions">
+        <button class="btn btn-ghost btn-sm" type="button" data-add-skill="${event}">Add skill</button>
+        <span class="routine-count" data-calc="count"></span>
       </div>
-      <section class="eg-extras" data-extras="${event}">${extrasSection(event, athlete)}</section>
       <label class="event-bonus">
         <input type="checkbox" data-bonus="${event}"${athlete.eventBonus?.[event] ? ' checked' : ''} />
         <span class="event-bonus-text"><strong>Event bonus +${fmt(EVENT_BONUS)}</strong><span>${esc(ap.eventBonus)}</span></span>
@@ -371,7 +461,7 @@ function renderEditor() {
       </div>
       <div class="editor-actions">
         <span id="save-status" class="save-status"></span>
-        <button class="btn btn-primary" type="button" id="export-all">Export PDF</button>
+        <button class="btn btn-primary" type="button" id="export-all" title="${EXPORT_TIP}">Export PDF</button>
         <button class="btn btn-quiet" type="button" id="delete-athlete">Delete</button>
       </div>
     </div>
@@ -414,6 +504,8 @@ function renderEditor() {
 
   ed.oninput = onSkillInput;
   ed.onclick = onEditorClick;
+  ed.onkeydown = onEditorKey;
+  ed.onpointerdown = onEditorPointerDown;
   $('#summary').onclick = (ev) => {
     const t = ev.target.closest('[data-tab]');
     if (t) selectTab(t.dataset.tab);
@@ -432,8 +524,7 @@ function onSkillInput(ev) {
     return;
   }
   if (!t.dataset.event) return;
-  const list = t.dataset.list === 'eg' ? a.egSkills : a.routines;
-  list[t.dataset.event][Number(t.dataset.idx)][t.dataset.field] = t.value;
+  a.routines[t.dataset.event][Number(t.dataset.idx)][t.dataset.field] = t.value;
   updateComputed();
   scheduleSave();
 }
@@ -482,49 +573,28 @@ function updateComputed() {
   for (const e of EVENTS) {
     const card = $(`[data-event-card="${e}"]`);
     const r = score.events[e];
-    // Map the scored (filled) rows back onto the 8 input rows.
-    let k = 0;
-    a.routines[e].forEach((s, i) => {
-      const rowEl = $(`[data-row="${i}"]`, card);
-      const filled = String(s.name || '').trim() || s.letter;
-      const res = filled ? r.rows[k++] : null;
-      $('[data-calc="value"]', rowEl).textContent = res?.letter ? fmt(res.value) : '';
-      $('[data-calc="cg"]', rowEl).textContent = res?.condensed ?? '';
-      $('[data-calc="bonus"]', rowEl).textContent = res?.bonus ? `+${fmt(res.bonus)}` : '';
-      rowEl.classList.toggle('has-bonus', !!res?.bonus);
-    });
-    // EG-only skills unlock only when all counting slots are filled and the
-    // counting skills are still missing an element group bonus.
-    const extrasEl = $(`[data-extras="${e}"]`, card);
-    const hasExtras = a.egSkills[e].length > 0;
-    extrasEl.hidden = !r.extrasActive && !hasExtras;
-    $('[data-add-eg]', extrasEl).hidden = !r.extrasActive || a.egSkills[e].length >= r.extraSlots;
-    const locked = $('.eg-extras-locked', extrasEl);
-    locked.hidden = r.extrasActive || !hasExtras;
-    locked.textContent =
-      r.rows.length < MAX_SKILLS
-        ? `Fill all ${MAX_SKILLS} skill slots above to use EG bonus skills. These are saved but not counting.`
-        : 'Your counting skills already earn every element group bonus, so these aren\'t needed. They\'re saved but not counting.';
-    extrasEl.classList.toggle('inactive', !r.extrasActive);
-
-    // EG-only skills: no difficulty value; explain when one doesn't earn a bonus.
-    r.extraRows.forEach((res, i) => {
-      const rowEl = $(`[data-extra-row="${i}"]`, card);
-      if (!rowEl) return;
-      const bonusEl = $('[data-calc="bonus"]', rowEl);
-      $('[data-calc="value"]', rowEl).textContent = res.filled ? '—' : '';
-      $('[data-calc="cg"]', rowEl).textContent = res.condensed ?? '';
-      let reason = '';
-      if (res.filled && !res.bonus && r.extrasActive) {
-        if (!res.condensed) reason = 'Pick an element group';
-        else if (res.value < EG_BONUS_MIN_VALUE) reason = 'Needs a B or higher';
-        else reason = `Group ${res.condensed} already earned`;
-      }
-      bonusEl.textContent = res.bonus ? `+${fmt(res.bonus)}` : res.filled && r.extrasActive ? '0.0' : '';
-      bonusEl.title = reason;
-      $('[data-calc="note"]', rowEl).textContent = reason;
-      rowEl.classList.toggle('has-bonus', !!res.bonus);
-    });
+    for (const it of r.items) {
+      const rowEl = $(`[data-row="${it.idx}"]`, card);
+      if (!rowEl) continue;
+      const repeat = it.status === 'repeat';
+      const nonCounting = it.status === 'noncounting';
+      rowEl.classList.toggle('is-repeat', repeat);
+      rowEl.classList.toggle('non-counting', nonCounting);
+      rowEl.classList.toggle('has-bonus', !!it.bonus);
+      $('[data-calc="value"]', rowEl).textContent = repeat ? '—' : it.letter ? fmt(it.value) : '';
+      $('[data-calc="cg"]', rowEl).textContent = repeat ? '' : it.condensed ?? '';
+      $('[data-calc="bonus"]', rowEl).textContent = it.bonus ? `+${fmt(it.bonus)}` : '';
+      let note = '';
+      if (repeat) note = `Repeat of skill ${it.repeatOf + 1}: each skill only counts once`;
+      else if (nonCounting)
+        note = it.bonus
+          ? 'Non-counting skill · earns element group credit (+0.3)'
+          : `Non-counting skill: not in your top ${MAX_SKILLS}`;
+      $('[data-calc="note"]', rowEl).textContent = note;
+    }
+    const filled = r.items.filter((it) => it.status !== 'blank').length;
+    $('[data-calc="count"]', card).textContent = `${r.rows.length} of ${MAX_SKILLS} counting · ${filled} skill${filled === 1 ? '' : 's'} listed`;
+    $(`[data-add-skill="${e}"]`, card).hidden = a.routines[e].length >= MAX_ROUTINE;
     $$('.cg-list li', card).forEach((li) => li.classList.toggle('earned', r.earnedGroups.includes(li.dataset.cg)));
     $('[data-total="difficulty"]', card).textContent = fmt(r.difficulty);
     $('[data-total="eg"]', card).textContent = fmt(r.egTotal);
@@ -584,7 +654,8 @@ async function onUser(user) {
   $('#local-banner').hidden = !user.local;
   app.innerHTML = `<p class="loading">Loading athletes…</p>`;
   try {
-    state.athletes = (await store.listAthletes()).map(normalize);
+    state.athletes = await store.listAthletes();
+    for (const a of state.athletes) if (normalize(a)) store.saveAthlete(a).catch(console.error);
   } catch (e) {
     console.error(e);
     app.innerHTML = `<p class="error">Could not load athletes: ${esc(e?.message || e)}</p>`;

@@ -83,41 +83,40 @@ const allC = [
   s('e', 'C', 7), s('f', 'C', 8), s('g', 'C', 2), s('h', 'C', 3),
 ];
 
-test('EG-only skill earns a missing group without adding difficulty', () => {
-  const without = scoreRoutine('bars', allC);
-  assert.equal(without.egTotal, 0.9);
-  const r = scoreRoutine('bars', allC, { egSkills: [s('Giant', 'B', 4)] });
+test('only the 8 highest-value skills count; ties go to the earlier skill', () => {
+  const r = scoreRoutine('bars', [s('kip', 'A', 1), ...allC, s('late B', 'B', 2)]);
+  assert.equal(r.rows.length, 8);
+  assert.equal(r.difficulty, 4.0);
+  assert.equal(r.items[0].status, 'noncounting'); // the A is pushed out
+  assert.equal(r.items[9].status, 'noncounting'); // B loses to the Cs
+  assert.deepEqual(r.rows.map((x) => x.name), allC.map((x) => x.name)); // routine order kept
+});
+
+test('a non-counting skill earns a missing element group without adding difficulty', () => {
+  assert.equal(scoreRoutine('bars', allC).egTotal, 0.9);
+  const r = scoreRoutine('bars', [...allC, s('Giant', 'B', 4)]);
   assert.equal(r.difficulty, 4.0);
   assert.equal(r.egTotal, 1.2);
-  assert.equal(r.extraRows[0].bonus, 0.3);
+  assert.deepEqual(r.extraRows.map((x) => x.name), ['Giant']);
   assert.equal(r.startValue, 15.2);
 });
 
-test('EG-only skill in an already-earned group, or below B, earns nothing', () => {
-  const r = scoreRoutine('bars', allC, { egSkills: [s('x', 'D', 1), s('y', 'A', 4)] });
+test('non-counting skills in an already-earned group, or below B, earn nothing', () => {
+  const r = scoreRoutine('bars', [...allC, s('x', 'C', 1), s('y', 'A', 4)]);
   assert.equal(r.egTotal, 0.9);
-  assert.deepEqual(r.extraRows.map((x) => x.bonus), [0, 0]);
+  assert.equal(r.extraRows.length, 0);
 });
 
-test('EG-only skills are ignored unless all 8 counting slots are filled', () => {
-  const r = scoreRoutine('bars', allC.slice(0, 7), { egSkills: [s('Giant', 'B', 4)] });
-  assert.equal(r.extrasActive, false);
-  assert.equal(r.extraRows[0].bonus, 0);
-  assert.equal(r.egTotal, 0.9);
+test('a skill only counts once, ignoring case, spaces and punctuation', () => {
+  const r = scoreRoutine('bars', [s('Clear hip', 'B', 3), s('Clearhip', 'B', 3), s('clear-HIP ', 'B', 3), s('Kip', 'A', 1)]);
+  assert.deepEqual(r.items.map((x) => x.status), ['counting', 'repeat', 'repeat', 'counting']);
+  assert.equal(r.items[1].repeatOf, 0);
+  assert.equal(r.difficulty, 0.4);
+  assert.equal(r.shortBy, 4); // repeats don't count toward the 6-skill minimum
 });
 
-test('athlete EG-only skills flow through scoreAthlete', () => {
-  const r = scoreAthlete({ routines: { bars: allC }, egSkills: { bars: [s('Giant', 'B', 4)] } });
-  assert.equal(r.events.bars.egTotal, 1.2);
-});
-
-test('EG-only skills stay locked when counting skills already earn every group', () => {
-  const r = scoreRoutine('bars', bars, { egSkills: [s('Giant', 'B', 4)] });
-  assert.equal(r.egTotal, 1.2);
-  assert.equal(r.extrasActive, false);
-  assert.equal(r.extraRows[0].bonus, 0);
-});
-
-test('extraSlots is the number of groups still missing', () => {
-  assert.equal(scoreRoutine('bars', allC).extraSlots, 1);
+test('a repeat never counts, even when it would be among the top 8', () => {
+  const r = scoreRoutine('beam', [...allC.slice(0, 7), s('a', 'E', 1)]);
+  assert.equal(r.items[7].status, 'repeat');
+  assert.equal(r.rows.length, 7);
 });

@@ -1,13 +1,11 @@
-// UCG WAG Open Scoring start value rules, mirrored from the
-// "SV Calculator" spreadsheet and the WAG Open SV Worksheet, plus the
-// UCG event-specific bonus.
+// UCG Infinity start value rules, mirrored from the WAG Open "SV Calculator"
+// spreadsheet and SV worksheet, plus the UCG event-specific bonus.
 import { VAULTS } from './vaults.js';
 
 export const EXECUTION = 10;
 export const MAX_SKILLS = 8;
 export const MIN_SKILLS = 6;
-// Extra skills listed only to earn an element group bonus (one per condensed group at most).
-export const MAX_EG_SKILLS = 4;
+export const MAX_ROUTINE = 20; // skills a routine list can hold (counting + non-counting)
 export const EG_BONUS = 0.3;
 export const EG_BONUS_MIN_VALUE = 0.3; // B or higher
 export const EVENT_BONUS = 0.3;
@@ -83,46 +81,78 @@ export function condensedGroupOf(event, eg) {
   return Object.keys(condensed).find((k) => condensed[k].includes(n)) ?? null;
 }
 
-const isFilled = (s) => s && (String(s.name || '').trim() || s.letter);
+const isFilled = (s) => !!(s && (String(s.name || '').trim() || s.letter));
+
+// "Clear hip", "clearhip" and "Clear-Hip" are the same skill.
+export const skillKey = (name) => String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
 /**
  * Score a bars/beam/floor routine.
- * skills: [{ name, letter, eg }]
+ * skills: the whole routine in order, [{ name, letter, eg }] (blank rows allowed).
+ *   - Each skill counts once: a later skill with the same name (ignoring case,
+ *     spaces and punctuation) is a repeat and doesn't count.
+ *   - The MAX_SKILLS highest-value non-repeat skills count (ties: earlier wins).
+ *   - A non-counting skill can still earn an element group bonus for a
+ *     condensed group the counting skills miss (no difficulty).
  * eventBonus: true if the apparatus-specific bonus requirement was performed.
- * egSkills: extra skills performed only for an element group bonus. They only
- *   apply once all MAX_SKILLS counting slots are filled and the counting skills
- *   miss at least one condensed group; then they can earn EG bonus for the
- *   missing groups, but add nothing to difficulty.
- * Returns per-skill rows (in routine order), extraRows (aligned with egSkills,
- * blanks included) and totals.
+ *
+ * Returns:
+ *   items      one entry per input row: { ...row, idx, status } where status is
+ *              'blank' | 'counting' | 'noncounting' | 'repeat' (repeats have repeatOf)
+ *   rows       counting skills in routine order (at most MAX_SKILLS)
+ *   extraRows  non-counting skills that earned element group credit
+ *   and totals.
  */
-export function scoreRoutine(event, skills = [], { eventBonus = false, egSkills = [] } = {}) {
-  const toRow = (s) => ({
-    name: String(s.name || '').trim(),
-    letter: s.letter || '',
-    value: letterValue(s.letter),
-    eg: s.eg ? Number(s.eg) : null,
-    condensed: s.eg ? condensedGroupOf(event, s.eg) : null,
+export function scoreRoutine(event, skills = [], { eventBonus = false } = {}) {
+  const items = skills.map((s, idx) => ({
+    idx,
+    name: String(s?.name || '').trim(),
+    letter: s?.letter || '',
+    value: letterValue(s?.letter),
+    eg: s?.eg ? Number(s.eg) : null,
+    condensed: s?.eg ? condensedGroupOf(event, s.eg) : null,
     bonus: 0,
-  });
-  const rows = skills.filter(isFilled).slice(0, MAX_SKILLS).map(toRow);
-  const extraRows = egSkills.slice(0, MAX_EG_SKILLS).map((s) => ({ ...toRow(s), filled: !!isFilled(s) }));
+    status: isFilled(s) ? null : 'blank',
+  }));
+
+  const firstSeen = new Map();
+  for (const it of items) {
+    if (it.status) continue;
+    const key = skillKey(it.name);
+    if (key && firstSeen.has(key)) {
+      it.status = 'repeat';
+      it.repeatOf = firstSeen.get(key);
+    } else if (key) firstSeen.set(key, it.idx);
+  }
+
+  const candidates = items.filter((it) => !it.status);
+  const counting = new Set(
+    [...candidates]
+      .sort((a, b) => b.value - a.value || a.idx - b.idx)
+      .slice(0, MAX_SKILLS)
+      .map((it) => it.idx)
+  );
+  for (const it of candidates) it.status = counting.has(it.idx) ? 'counting' : 'noncounting';
+
+  const rows = items.filter((it) => it.status === 'counting');
+  const nonCounting = items.filter((it) => it.status === 'noncounting');
 
   // One +0.3 per condensed group, credited to the first qualifying skill —
-  // counting skills first, then EG-only skills.
+  // counting skills first, then non-counting skills for any group still missing.
   const earned = new Set();
   const credit = (list) => {
+    const got = [];
     for (const r of list) {
       if (r.condensed && r.value >= EG_BONUS_MIN_VALUE && !earned.has(r.condensed)) {
         earned.add(r.condensed);
         r.bonus = EG_BONUS;
+        got.push(r);
       }
     }
+    return got;
   };
   credit(rows);
-  const missingGroups = Object.keys(APPARATUS[event].condensed).length - earned.size;
-  const extrasActive = rows.length === MAX_SKILLS && missingGroups > 0;
-  if (extrasActive) credit(extraRows);
+  const extraRows = credit(nonCounting);
 
   const difficulty = round1(rows.reduce((t, r) => t + r.value, 0));
   const egTotal = round1(earned.size * EG_BONUS);
@@ -133,10 +163,9 @@ export function scoreRoutine(event, skills = [], { eventBonus = false, egSkills 
     : 0;
 
   return {
+    items,
     rows,
     extraRows,
-    extrasActive,
-    extraSlots: extrasActive ? missingGroups : 0, // how many EG-only skills could still help
     difficulty,
     egTotal,
     eventBonus: eventBonusTotal,
@@ -160,10 +189,7 @@ export function scoreAthlete(athlete) {
   const events = Object.fromEntries(
     EVENTS.map((e) => [
       e,
-      scoreRoutine(e, athlete.routines?.[e] || [], {
-        eventBonus: !!athlete.eventBonus?.[e],
-        egSkills: athlete.egSkills?.[e] || [],
-      }),
+      scoreRoutine(e, athlete.routines?.[e] || [], { eventBonus: !!athlete.eventBonus?.[e] }),
     ])
   );
   const allAround = round1(
