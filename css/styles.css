@@ -329,7 +329,7 @@ input::placeholder { color: var(--fg-muted); }
 .skill-row {
   display: grid;
   grid-template-columns: 50px minmax(120px, 1fr) 68px minmax(150px, 230px) 44px 40px 48px 28px;
-  gap: 4px 8px; align-items: center; padding: 4px 6px; border-radius: var(--radius);
+  gap: 4px 8px; align-items: center; padding: 5px 8px; border-radius: var(--radius);
   transition: background var(--duration-1) var(--ease);
 }
 .skill-head span {
@@ -366,23 +366,17 @@ input::placeholder { color: var(--fg-muted); }
 .skill-row.drop-above { box-shadow: 0 -3px 0 0 var(--ucg-purple); }
 .skill-row.drop-below { box-shadow: 0 3px 0 0 var(--ucg-purple); }
 
-.row-note { grid-column: 2 / -1; font-size: var(--fs-xs); font-weight: 600; margin-top: -2px; }
+.skill-row[data-row] + .skill-row[data-row] { margin-top: 6px; }
+.row-note { grid-column: 2 / -1; font-size: var(--fs-xs); font-weight: 600; color: var(--fg-secondary); margin-top: -1px; }
 .row-note:empty { display: none; }
 
-/* Repeated skill: light red, doesn't count */
-.skill-row.is-repeat { background: #fdebe6; }
-.skill-row.is-repeat .col-name,
-.skill-row.is-repeat select { border-color: var(--ucg-red-orange); background-color: #fff5f2; }
-.skill-row.is-repeat .row-note { color: #a8391f; }
-.skill-row.is-repeat .num { color: #a8391f; font-weight: 700; }
+/* Repeats and skills beyond the top 8: a gray bar behind the row; the
+   note under the row says which. Fields stay full strength. */
+.skill-row.is-repeat,
+.skill-row.non-counting { background: #e9edef; padding-top: 8px; padding-bottom: 8px; }
+.skill-row.is-repeat .col-name, .skill-row.is-repeat select,
+.skill-row.non-counting .col-name, .skill-row.non-counting select { background-color: var(--ucg-white); }
 
-/* Beyond the top 8: greyed out */
-.skill-row.non-counting .col-name,
-.skill-row.non-counting select,
-.skill-row.non-counting .col-value,
-.skill-row.non-counting .col-cg,
-.skill-row.non-counting .num { opacity: 0.5; }
-.skill-row.non-counting .row-note { color: var(--fg-muted); }
 .skill-row.non-counting.has-bonus .row-note { color: var(--fg-accent); }
 
 /* ---- Event bonus toggle ---- */

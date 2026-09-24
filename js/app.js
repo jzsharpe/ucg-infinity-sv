@@ -409,8 +409,8 @@ function eventCard(event, athlete) {
       </header>
       <p class="routine-help">
         List the whole routine in order, and drag <span class="grip-inline">${ICON_GRIP}</span> to reorder.
-        <strong>Each skill counts only once</strong>: repeats are marked in red and don't count.
-        Your ${MAX_SKILLS} highest-value skills count toward difficulty; any others are greyed out as non-counting skills.
+        <strong>Each skill counts only once</strong>, and your ${MAX_SKILLS} highest-value skills count toward difficulty.
+        Repeats and non-counting skills are shaded gray.
       </p>
       <div class="skill-table" data-routine="${event}">${routineRows(event, athlete)}</div>
       <div class="routine-actions">
