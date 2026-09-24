@@ -11,8 +11,8 @@ These follow the original *WAG Open Scoring Routine Planning and SV Calculator* 
 | Part | Rule |
 | --- | --- |
 | Execution | 10.0 |
-| Difficulty | A=0.1, B=0.3, C=0.5, D=0.7, E=0.9. Athletes list the whole routine in order (drag to reorder); the 8 highest-value skills count, and ties go to the skill listed first. Other skills are shaded gray as non-counting. |
-| Repeats | Each skill counts once. A later skill with the same name (ignoring case, spaces and punctuation, so "Clear hip" = "Clearhip") is shaded gray, marked as a repeat, and doesn't count. |
+| Difficulty | A=0.1, B=0.3, C=0.5, D=0.7, E=0.9. Athletes list the whole routine in order (drag to reorder); the 8 highest-value skills count, and ties go to the skill listed first. Counting skills are highlighted; other skills are marked as non-counting. |
+| Repeats | Each skill counts once. A later skill with the same name (ignoring case, spaces and punctuation, so "Clear hip" = "Clearhip") is marked as a repeat and doesn't count. |
 | Element group bonus | +0.3 for each condensed element group (I–IV) with a B or higher skill, max +1.2 |
 | Event bonus (UCG) | +0.3 when performed. Bars: minimum of 2 bar changes. Beam: acro series with 2 connected flight elements on beam. Floor: acro pass with at least 2 connected saltos (direct or indirect). |
 | Short routine | −1.0 for each counting skill under 6 |

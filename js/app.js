@@ -410,7 +410,7 @@ function eventCard(event, athlete) {
       <p class="routine-help">
         List the whole routine in order, and drag <span class="grip-inline">${ICON_GRIP}</span> to reorder.
         <strong>Each skill counts only once</strong>, and your ${MAX_SKILLS} highest-value skills count toward difficulty.
-        Repeats and non-counting skills are shaded gray.
+        Counting skills are highlighted; repeats and non-counting skills aren't, and a note under each says why.
       </p>
       <div class="skill-table" data-routine="${event}">${routineRows(event, athlete)}</div>
       <div class="routine-actions">
@@ -578,6 +578,7 @@ function updateComputed() {
       if (!rowEl) continue;
       const repeat = it.status === 'repeat';
       const nonCounting = it.status === 'noncounting';
+      rowEl.classList.toggle('is-counting', it.status === 'counting');
       rowEl.classList.toggle('is-repeat', repeat);
       rowEl.classList.toggle('non-counting', nonCounting);
       rowEl.classList.toggle('has-bonus', !!it.bonus);
