@@ -264,7 +264,7 @@ function skillRow(event, i, s) {
       <span class="col-cg calc" data-calc="cg"></span>
       <span class="col-bonus calc" data-calc="bonus"></span>
       <button type="button" class="remove-skill" data-remove-skill="${event}" data-idx="${i}" aria-label="Remove ${label}" title="Remove skill">${ICON_X}</button>
-      <span class="row-note" data-calc="note"></span>
+      <span class="row-flag" data-calc="flag"></span>
     </div>`;
 }
 
@@ -410,7 +410,7 @@ function eventCard(event, athlete) {
       <p class="routine-help">
         List the whole routine in order, and drag <span class="grip-inline">${ICON_GRIP}</span> to reorder.
         <strong>Each skill counts only once</strong>, and your ${MAX_SKILLS} highest-value skills count toward difficulty.
-        Counting skills are highlighted; repeats and non-counting skills aren't, and a note under each says why.
+        Counting skills are highlighted; repeats and non-counting skills are shaded gray and flagged.
       </p>
       <div class="skill-table" data-routine="${event}">${routineRows(event, athlete)}</div>
       <div class="routine-actions">
@@ -585,13 +585,23 @@ function updateComputed() {
       $('[data-calc="value"]', rowEl).textContent = repeat ? '—' : it.letter ? fmt(it.value) : '';
       $('[data-calc="cg"]', rowEl).textContent = repeat ? '' : it.condensed ?? '';
       $('[data-calc="bonus"]', rowEl).textContent = it.bonus ? `+${fmt(it.bonus)}` : '';
-      let note = '';
-      if (repeat) note = `Repeat of skill ${it.repeatOf + 1}: each skill only counts once`;
-      else if (nonCounting)
-        note = it.bonus
-          ? 'Non-counting skill · earns element group credit (+0.3)'
-          : `Non-counting skill: not in your top ${MAX_SKILLS}`;
-      $('[data-calc="note"]', rowEl).textContent = note;
+      // A short flag in place of Value / CEG keeps every row the same height;
+      // the full explanation is in its tooltip.
+      const flagEl = $('[data-calc="flag"]', rowEl);
+      flagEl.textContent = repeat
+        ? `Repeat of Skill ${it.repeatOf + 1}`
+        : nonCounting
+          ? it.bonus
+            ? 'EG Credit Only'
+            : `Not in Top ${MAX_SKILLS}`
+          : '';
+      flagEl.title = repeat
+        ? `Repeat of skill ${it.repeatOf + 1}: each skill only counts once`
+        : nonCounting
+          ? it.bonus
+            ? `Not in your top ${MAX_SKILLS}, so it adds no difficulty, but it earns element group credit (+0.3)`
+            : `Not in your top ${MAX_SKILLS}, so it doesn't count toward difficulty`
+          : '';
     }
     const filled = r.items.filter((it) => it.status !== 'blank').length;
     $('[data-calc="count"]', card).textContent = `${r.rows.length} of ${MAX_SKILLS} counting · ${filled} skill${filled === 1 ? '' : 's'} listed`;
