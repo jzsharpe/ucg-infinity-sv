@@ -178,7 +178,7 @@ function drawEventPage(doc, fonts, logo, athlete, event, r) {
   const ebx = 548;
   const ebw = 152;
   p.box(ebx, tableTop - headH, ebw, headH, { fill: HEAD, border: HEAD });
-  p.center(`${ap.short} Event Bonus`, ebx + ebw / 2, tableTop - 15, { size: 9, font: fonts.bold, color: WHITE });
+  p.center(`${ap.short} Apparatus Bonus`, ebx + ebw / 2, tableTop - 15, { size: 9, font: fonts.bold, color: WHITE });
   p.center(`(+${fmt(EVENT_BONUS)})`, ebx + ebw / 2, tableTop - 27, { size: 8, font: fonts.bold, color: WHITE });
   const ebBodyTop = tableTop - headH;
   p.box(ebx, tableBottom, ebw, ebBodyTop - tableBottom);
@@ -201,7 +201,7 @@ function drawEventPage(doc, fonts, logo, athlete, event, r) {
     ['Execution', '10.0'],
     ['Total Difficulty', fmt(r.difficulty)],
     ['Total EG', fmt(r.egTotal)],
-    ['Event Bonus', fmt(r.eventBonus)],
+    ['Apparatus Bonus', fmt(r.eventBonus)],
     [`Skills short of ${MIN_SKILLS}`, fmt(r.shortBy)],
     ['Start Value', r.startValue.toFixed(2)],
   ];
@@ -226,7 +226,7 @@ function drawEventPage(doc, fonts, logo, athlete, event, r) {
   const notes = [
     ['Difficulty Notes:', 'A=0.1, B=0.3, C=0.5, etc. Only the top 8 most valuable skills count towards difficulty, so only list the 8 most difficult.'],
     ['Element Group Bonus:', 'For each Condensed Element Group (below) in which you do a B or higher skill, you get +0.3. One bonus per group, max +1.2.'],
-    [`Event Bonus:`, `+${fmt(EVENT_BONUS)} when the event-specific requirement is performed. Bars: min. 2 bar changes. Beam: acro series with 2 connected flight elements. Floor: acro pass with min. 2 connected saltos (direct or indirect).`],
+    [`Apparatus Bonus:`, `+${fmt(EVENT_BONUS)} when the apparatus-specific requirement is performed. Bars: min. 2 bar changes. Beam: acro series with 2 connected flight elements. Floor: acro pass with min. 2 connected saltos (direct or indirect).`],
     ['Short routine deduction:', `For each skill fewer than ${MIN_SKILLS} in the routine, the gymnast loses 1 point (a 4 skill routine gets -2.0).`],
   ];
   const nx = 110;
@@ -327,7 +327,7 @@ function drawSummaryPage(doc, fonts, logo, athlete, score) {
     ['Execution', 260, 70],
     ['Difficulty', 330, 70],
     ['EG Bonus', 400, 70],
-    ['Event Bonus', 470, 76],
+    ['Apparatus Bonus', 470, 76],
     ['Short of 6', 546, 70],
     ['Start Value', 616, 84],
   ];

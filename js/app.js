@@ -419,7 +419,7 @@ function eventCard(event, athlete) {
       </div>
       <label class="event-bonus">
         <input type="checkbox" data-bonus="${event}"${athlete.eventBonus?.[event] ? ' checked' : ''} />
-        <span class="event-bonus-text"><strong>Event bonus +${fmt(EVENT_BONUS)}</strong><span>${esc(ap.eventBonus)}</span></span>
+        <span class="event-bonus-text"><strong>Apparatus bonus +${fmt(EVENT_BONUS)}</strong><span>${esc(ap.eventBonus)}</span></span>
         <span class="event-bonus-value calc" data-calc="event-bonus"></span>
       </label>
       <div class="event-foot">
@@ -428,7 +428,7 @@ function eventCard(event, athlete) {
           <div><dt>Execution</dt><dd>10.0</dd></div>
           <div><dt>Difficulty</dt><dd data-total="difficulty"></dd></div>
           <div><dt>EG bonus</dt><dd data-total="eg"></dd></div>
-          <div><dt>Event bonus</dt><dd data-total="event-bonus"></dd></div>
+          <div><dt>Apparatus bonus</dt><dd data-total="event-bonus"></dd></div>
           <div><dt>Short of ${MIN_SKILLS}</dt><dd data-total="short"></dd></div>
           <div class="grand"><dt>Start value</dt><dd data-total="sv"></dd></div>
         </dl>
