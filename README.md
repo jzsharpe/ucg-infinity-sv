@@ -50,4 +50,4 @@ The look follows the UCG Design System (2026 identity): navy / blue green / ligh
 
 Fonts: the brand faces are Greed Condensed and Suisse Intl, which are licensed and not included in this public repo. The site uses the design system's approved fallbacks, Saira Condensed (Google Fonts) and Arial/Helvetica. If you have a web license that allows it, add the `.woff2` files and `@font-face` rules and the stacks pick them up automatically.
 
-`assets/logo.png` is the lockup drawn at the top of each PDF page.
+`assets/logo.png` is the lockup drawn at the top of each PDF page. The site icon is `assets/favicon.svg` (white mark on a dark blue green circle), with PNG copies for older browsers and phone home screens.
